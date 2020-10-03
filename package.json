@@ -1,0 +1,19 @@
+{
+  "name": "rodeobot",
+  "version": "1.0.0",
+  "description": "Discord bot for Friends Rodeo",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/idamadam/rodeobot.git"
+  },
+  "author": "Idam Adam",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/idamadam/rodeobot/issues"
+  },
+  "homepage": "https://github.com/idamadam/rodeobot#readme"
+}
