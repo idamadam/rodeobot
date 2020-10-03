@@ -13,4 +13,4 @@ function healthcheck() {
   app.listen(PORT, () => {});  
 }
 
-module.exports = healthcheck
+module.exports = healthcheck;
