@@ -2,10 +2,10 @@
   "name": "rodeobot",
   "version": "1.0.0",
   "description": "Discord bot for Friends Rodeo",
-  "main": "app.js",
+  "main": "src/app.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "start": "node app"
+    "start": "node src/app"
   },
   "repository": {
     "type": "git",

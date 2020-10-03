@@ -5,7 +5,7 @@ const Discord = require("discord.js");
 const _ = require("underscore");
 const client = new Discord.Client();
 
-const qldBorder = require("./qldBorder");
+const qldBorder = require("./components/qldBorder");
 const healthcheck = require("./healthcheck");
 
 const TOKEN = process.env.TOKEN;
@@ -21,6 +21,7 @@ client.on("message", async (msg) => {
     let lowercaseMessage = msg.content.toLowerCase();
 
     if (_.contains(qldBorder.acceptedMessages, lowercaseMessage)) {
+      console.log(`Recieved a Qld border question from ${msg.author.username}`);
       await qldBorder.checkIfOpen(msg);
     }
   } catch (e) {

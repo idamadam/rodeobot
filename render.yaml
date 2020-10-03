@@ -10,3 +10,5 @@ services:
   envVars:
     - key: TOKEN
       sync: false
+    - key: GIPHY_KEY
+      sync: false
