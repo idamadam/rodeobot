@@ -6,3 +6,6 @@ services:
   pullRequestPreviewsEnabled: true
   buildCommand: npm install
   startCommand: npm start
+  envVars:
+    - key: TOKEN
+      sync: false
