@@ -1,29 +1,22 @@
 require("dotenv").config();
 const Discord = require("discord.js");
-const bot = new Discord.Client();
+const client = new Discord.Client();
 const express = require("express");
 
-const app = express();
-const port = process.env.PORT;
+const PORT = process.env.PORT;
 const TOKEN = process.env.TOKEN;
 
-bot.login(TOKEN);
+const app = express();
 
-bot.on("ready", () => {
-  console.info(`Logged in as ${bot.user.tag}!`);
+client.login(TOKEN);
+
+client.on("ready", () => {
+  console.info(`Logged in as ${client.user.tag}!`);
 });
 
-bot.on("message", (msg) => {
+client.on("message", (msg) => {
   if (msg.content === "ping") {
     msg.reply("pong");
-    msg.channel.send("pong");
-  } else if (msg.content.startsWith("!kick")) {
-    if (msg.mentions.users.size) {
-      const taggedUser = msg.mentions.users.first();
-      msg.channel.send(`You wanted to kick: ${taggedUser.username}`);
-    } else {
-      msg.reply("Please tag a valid user!");
-    }
   }
 });
 
@@ -31,4 +24,4 @@ app.get("/healthz", (req, res) => {
   res.json({ status: "UP" });
 });
 
-app.listen(port, () => {});
+app.listen(PORT, () => {});
