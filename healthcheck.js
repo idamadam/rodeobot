@@ -1,11 +1,16 @@
+require("dotenv").config();
 const express = require("express");
 
-module.exports = function (app) {
-  var router = express.Router();
+const PORT = process.env.PORT;
 
-  router.get("/", function (req, res, next) {
+const app = express();
+
+function healthcheck() {
+  app.get("/healthz", (req, res) => {
     res.json({ status: "UP" });
   });
+  
+  app.listen(PORT, () => {});  
+}
 
-  app.use("/health", router);
-};
+module.exports = healthcheck
