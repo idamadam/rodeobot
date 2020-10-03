@@ -1,7 +1,10 @@
 require("dotenv").config();
 const Discord = require("discord.js");
 const bot = new Discord.Client();
+const express = require("express");
 
+const app = express();
+const port = process.env.PORT;
 const TOKEN = process.env.TOKEN;
 
 bot.login(TOKEN);
@@ -23,3 +26,9 @@ bot.on("message", (msg) => {
     }
   }
 });
+
+app.get("/healthz", (req, res) => {
+  res.json({ status: "UP" });
+});
+
+app.listen(port, () => {});

@@ -6,6 +6,7 @@ services:
   pullRequestPreviewsEnabled: true
   buildCommand: npm install
   startCommand: npm start
+  healthCheck: /healthz
   envVars:
     - key: TOKEN
       sync: false
