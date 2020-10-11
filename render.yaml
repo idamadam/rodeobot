@@ -12,3 +12,9 @@ services:
       sync: false
     - key: GIPHY_KEY
       sync: false
+- type: cron
+  name: rodeobot-scheduled
+  env: node
+  schedule: "0 * * * *"
+  buildCommand: npm install
+  startCommand: npm run scheduled
