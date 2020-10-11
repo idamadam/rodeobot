@@ -8,9 +8,9 @@ const client = new Discord.Client();
 const qldBorder = require("./components/qldBorder");
 const healthcheck = require("./healthcheck");
 
-const TOKEN = process.env.TOKEN;
+const DISCORD_KEY = process.env.DISCORD_KEY;
 
-client.login(TOKEN);
+client.login(DISCORD_KEY);
 
 client.on("ready", () => {
   console.info(`Logged in as ${client.user.tag}!`);
