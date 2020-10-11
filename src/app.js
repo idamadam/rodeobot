@@ -14,6 +14,7 @@ client.login(DISCORD_KEY);
 
 client.on("ready", () => {
   console.info(`Logged in as ${client.user.tag}!`);
+  healthcheck();
 });
 
 client.on("message", async (msg) => {
@@ -29,5 +30,3 @@ client.on("message", async (msg) => {
     msg.channel.send("Oh no, the bot iws bwoken.");
   }
 });
-
-healthcheck();
