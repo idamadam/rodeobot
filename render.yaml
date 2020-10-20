@@ -24,3 +24,5 @@ envVarGroups:
     sync: false
   - key: GIPHY_KEY
     sync: false
+  - key: GENERAL_CHANNEL_ID
+    sync: false
