@@ -17,6 +17,11 @@ function getBirthdayPeople(people, timezone) {
 
 function sendWish(timezone) {
   const birthdayPeople = getBirthdayPeople(friends, timezone);
+
+  if (Object.keys(birthdayPeople).length == 0) {
+    console.log("It's no one's birthday today.");
+    return;
+  }
   
   client.login(process.env.DISCORD_KEY);
 
