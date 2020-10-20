@@ -11,7 +11,7 @@ function main() {
   const now = spacetime.now(melbTimezone);
 
   // The time that the script should run
-  const runTime = "9:00pm";
+  const runTime = "9:00am";
 
   // Check whether the current time is the run time, to the nearest hour
   const shouldRun = now.isSame(now.time(runTime), "hour");
