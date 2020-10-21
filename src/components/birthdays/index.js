@@ -5,7 +5,6 @@ const Discord = require("discord.js");
 const spacetime = require("spacetime");
 
 const friends = require("./../../../friends.json");
-const client = new Discord.Client();
 
 function getBirthdayPeople(people, timezone) {
     return people.filter((person) => {
@@ -16,6 +15,7 @@ function getBirthdayPeople(people, timezone) {
 }
 
 function sendWish(timezone) {
+  const client = new Discord.Client();
   const birthdayPeople = getBirthdayPeople(friends, timezone);
 
   if (Object.keys(birthdayPeople).length == 0) {
