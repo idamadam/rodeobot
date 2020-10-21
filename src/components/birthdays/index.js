@@ -22,7 +22,7 @@ function sendWish(timezone) {
     console.log("It's no one's birthday today.");
     return;
   }
-  
+
   client.login(process.env.DISCORD_KEY);
 
   client.on("ready", () => {
@@ -37,11 +37,22 @@ function sendWish(timezone) {
         "https://media.giphy.com/media/yoJC2GnSClbPOkV0eA/giphy.gif"
       );
     });
+  });
 
-    return;
+  let botMessageCount = 0; 
+
+  // Kill the bot after it's sent 2 messages
+  client.on("message", (receivedMessage) => {
+    if (receivedMessage.author == client.user) {
+      botMessageCount++;
+    }
+
+    if (botMessageCount == 2) {
+      client.destroy();
+    }
   });
 }
 
-module.exports = { 
-  sendWish
-}
+module.exports = {
+  sendWish,
+};
