@@ -1,17 +1,17 @@
 "use strict";
 
-require("dotenv").config(); 
+require("dotenv").config();
 const Discord = require("discord.js");
 const spacetime = require("spacetime");
 
 const friends = require("./../../../friends.json");
 
 function getBirthdayPeople(people, timezone) {
-    return people.filter((person) => {
-        const now = spacetime.now(timezone);
-        let birthday = spacetime(person.birthday, timezone);
-        return now.isSame(birthday, "day");
-    })
+  return people.filter((person) => {
+    const now = spacetime.now(timezone);
+    let birthday = spacetime(person.birthday, timezone);
+    return now.isSame(birthday, "day");
+  });
 }
 
 function sendWish(timezone) {
