@@ -1,7 +1,7 @@
 "use strict";
 
 const spacetime = require("spacetime");
-const birthdays = require("./components/birthdays");
+const processBirthdays = require("./components/processBirthdays");
 
 // Use the Melbourne timezone for all operations
 const melbTimezone = "Australia/Melbourne";
@@ -16,7 +16,7 @@ const runTime = "9:00am";
 const shouldRun = now.isSame(now.time(runTime), "hour");
 
 if (shouldRun) {
-  birthdays.sendWish(melbTimezone);
+  processBirthdays(melbTimezone);
 } else {
   console.log(`It's not the right time to run, the current time is ${now.time()}`);
 }
