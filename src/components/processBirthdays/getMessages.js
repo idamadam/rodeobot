@@ -8,7 +8,7 @@ function getMessages({ people, timezone, messageType = "birthdays" }) {
   if (messageType === "birthdays") {
     filterTime = spacetime.now(timezone);
   } else if (messageType === "reminders") {
-    filterTime = spacetime.now(timezone).add(12, "days");
+    filterTime = spacetime.now(timezone).add(14, "days");
   }
 
   const filteredList = people.filter((person) => {
