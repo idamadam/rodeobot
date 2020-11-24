@@ -13,7 +13,7 @@ async function checkIfOpen(msg) {
   const qldThreshold = 28;
 
   const unknownCases = $(
-    "h3:contains('Days Since Last Community Transmission')"
+    "h3:contains('Days since last unlinked case')"
   )
     .next()
     .children();
