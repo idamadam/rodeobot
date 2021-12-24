@@ -5,6 +5,10 @@ require("dotenv").config();
 const fs = require('fs');
 const { Client, Collection, Intents } = require("discord.js");
 
+const Healthcheck = require('./healthcheck');
+
+Healthcheck();
+
 const DISCORD_KEY = process.env.DISCORD_KEY;
 
 const client = new Client({
