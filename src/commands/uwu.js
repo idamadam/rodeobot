@@ -30,8 +30,9 @@ async function getTweet(tweetId) {
 		const responseJson = await response.json();
 		console.log(responseJson);
 		return responseJson.data[0].text;
-	} catch {
-		throw("Couldn't parse the tweet");
+	} catch(error) {
+		console.error(error);
+		throw("I couldn't translate the tweet");
 	}
 
 }
