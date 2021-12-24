@@ -5,7 +5,7 @@ const fetch = require("node-fetch");
 const uwu = new Uwuifier();
 
 const data = new SlashCommandBuilder()
-	.setName('twuvu')
+	.setName('uwu')
 	.setDescription('Translate tweet to uwu')
 	.addStringOption(option => option.setName('tweet-link').setDescription('Link of the tweet to uwuify').setRequired(true));
 
@@ -40,7 +40,7 @@ async function execute(interaction) {
 	const tweetURL = interaction.options.getString('tweet-link');
 	const tweetId = getTweetId(tweetURL);
 	const tweetContent = await getTweet(tweetId);
-	const response = uwu.uwuifyWords(tweetContent);
+	const response = uwu.uwuifySentence(tweetContent);
 	await interaction.reply(response);
 }
 
