@@ -2,9 +2,9 @@ services:
 - type: pserv
   name: rodeobot
   env: node
-  plan: starter
+  plan: free
   pullRequestPreviewsEnabled: true
-  buildCommand: npm install
+  buildCommand: npm install && npm run deploy-commands
   startCommand: npm start
   healthCheckPath: /healthz
   envVars:

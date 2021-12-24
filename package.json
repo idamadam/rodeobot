@@ -6,7 +6,9 @@
   "scripts": {
     "test": "jest",
     "start": "node src/app",
-    "scheduled": "node src/scheduled"
+    "start:dev": "nodemon",
+    "scheduled": "node src/scheduled",
+    "deploy-commands": "node src/deploy-commands"
   },
   "repository": {
     "type": "git",
@@ -32,6 +34,7 @@
     "uwuifier": "^4.0.4"
   },
   "devDependencies": {
-    "jest": "^26.6.0"
+    "jest": "^26.6.0",
+    "nodemon": "^2.0.15"
   }
 }
