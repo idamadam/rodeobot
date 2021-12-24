@@ -2,5 +2,5 @@
   "watch": ["src"],
   "ext": ".js",
   "ignore": [],
-  "exec": "./src/app"
+  "exec": "npm start"
 }
