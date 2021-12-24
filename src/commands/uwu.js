@@ -15,7 +15,7 @@ function getTweetId(tweetUrl) {
 	if (testRegex.test(tweetUrl)) {
 		return tweetUrl.match(/\d+/)
 	} else {
-		throw 'Not a valid Tweet URL';
+		throw 'I can only translate links from Twitter';
 	}
 }
 
@@ -37,11 +37,19 @@ async function getTweet(tweetId) {
 }
 
 async function execute(interaction) {
-	const tweetURL = interaction.options.getString('tweet-link');
-	const tweetId = getTweetId(tweetURL);
-	const tweetContent = await getTweet(tweetId);
-	const response = uwu.uwuifySentence(tweetContent);
-	await interaction.reply(response);
+	try { 
+		const tweetURL = interaction.options.getString('tweet-link');
+		const tweetId = getTweetId(tweetURL);
+		const tweetContent = await getTweet(tweetId);
+		const response = uwu.uwuifySentence(tweetContent);
+		await interaction.reply(response);
+	} catch(error) {
+		await interaction.reply({ 
+			content: uwu.uwuifySentence(error),
+			ephemeral: true
+		});
+	}
+
 }
 
 module.exports = {
