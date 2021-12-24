@@ -6,7 +6,7 @@
   "scripts": {
     "test": "jest",
     "start": "node src/app",
-    "start:dev": "nodemon src/app",
+    "start:dev": "nodemon",
     "scheduled": "node src/scheduled"
   },
   "repository": {
