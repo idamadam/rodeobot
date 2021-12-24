@@ -13,7 +13,7 @@ services:
   name: rodeobot-scheduled
   env: node
   schedule: "0 * * * *"
-  buildCommand: npm install
+  buildCommand: npm install && npm run deploy-commands
   startCommand: npm run scheduled
   envVars:
     - fromGroup: rodeobot-secrets
