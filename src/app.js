@@ -4,10 +4,28 @@ require("dotenv").config();
 
 const fs = require('fs');
 const { Client, Collection, Intents } = require("discord.js");
+const Database = require('sqlite-async');
 
 const Healthcheck = require('./healthcheck');
 
 Healthcheck();
+
+Database.open('./db/rodeo.db')
+	.then(db => {
+		db.run(`CREATE TABLE IF NOT EXISTS games (
+			"id"	TEXT NOT NULL,
+			"user_id"	INTEGER NOT NULL,
+			"day"	INTEGER NOT NULL,
+			"timestamp"	TEXT NOT NULL,
+			"score"	INTEGER NOT NULL,
+			PRIMARY KEY("id")
+		)`)
+		db.close();
+	})
+	.catch(error => {
+		db.close();
+		return console.error(error)
+	});
 
 const DISCORD_KEY = process.env.DISCORD_KEY;
 
