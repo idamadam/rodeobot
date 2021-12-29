@@ -52,7 +52,7 @@ async function addScore({ user_id, day, score }) {
               VALUES 
                 ('${entryId}', ${user_id}, datetime('now'), ${day}, ${score})`
 
-  const db = await Database.open('./db/rodeo.db');
+  const db = await Database.open(process.env.DB_PATH);
   await db.run(sql)
   // TODO: Do something with the returned the score.
   const data = await db.all(getScoreSql)

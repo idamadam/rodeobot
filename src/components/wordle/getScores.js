@@ -14,7 +14,7 @@ ORDER BY
 
 async function getScores() {
   try {
-    const db = await Database.open('./db/rodeo.db');
+    const db = await Database.open(process.env.DB_PATH);
     const data = await db.all(getScoreSql)
     await db.close()
     return data;
