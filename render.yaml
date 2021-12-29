@@ -2,13 +2,17 @@ services:
 - type: web
   name: rodeobot
   env: node
-  plan: free
+  plan: starter
   pullRequestPreviewsEnabled: true
   buildCommand: npm install && npm run deploy-commands
   startCommand: npm start
   healthCheckPath: /healthz
   envVars:
     - fromGroup: rodeobot-secrets
+  disk:
+      name: sqlite-data
+      mountPath: /db
+      sizeGB: 1
 - type: cron
   name: rodeobot-scheduled
   env: node

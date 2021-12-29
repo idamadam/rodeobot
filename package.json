@@ -30,6 +30,7 @@
     "express": "^4.17.1",
     "node-fetch": "^2.6.1",
     "spacetime": "^6.6.4",
+    "sqlite-async": "^1.1.2",
     "underscore": "^1.11.0",
     "uwuifier": "^4.0.4"
   },
