@@ -24,8 +24,7 @@ Database.open('./db/rodeo.db')
 		db.close();
 	})
 	.catch(error => {
-		db.close();
-		return console.error(error)
+		throw error
 	});
 
 const DISCORD_KEY = process.env.DISCORD_KEY;
