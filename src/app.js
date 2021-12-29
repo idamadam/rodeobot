@@ -7,6 +7,7 @@ const { Client, Collection, Intents } = require("discord.js");
 const Database = require('sqlite-async');
 
 const Healthcheck = require('./healthcheck');
+const { processScoreSubmit, wordleRegex } = require('./components/wordle/addScore');
 
 Healthcheck();
 
@@ -64,3 +65,9 @@ client.on('interactionCreate', async interaction => {
 		await interaction.reply({ content: 'There was an error while executing this command!', ephemeral: true });
 	}
 });
+
+client.on('messageCreate', async message => {
+	if (wordleRegex.test(message.content)) {
+		processScoreSubmit(message, client);
+	}
+})
