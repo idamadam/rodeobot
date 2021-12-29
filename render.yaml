@@ -30,3 +30,5 @@ envVarGroups:
     sync: false
   - key: GENERAL_CHANNEL_ID
     sync: false
+  - key: DB_PATH
+    value: /db/rodeo.db

@@ -11,7 +11,7 @@ const { processScoreSubmit, wordleRegex } = require('./components/wordle/addScor
 
 Healthcheck();
 
-Database.open('./db/rodeo.db')
+Database.open(process.env.DB_PATH)
 	.then(db => {
 		db.run(`CREATE TABLE IF NOT EXISTS games (
 			"id"	TEXT NOT NULL,
