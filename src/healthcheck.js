@@ -7,7 +7,6 @@ const app = express();
 
 function healthcheck() {
   app.get("/healthz", (req, res) => {
-    console.log('Recieved healthcheck request')
     res.json({ status: "UP" });
   });
   
