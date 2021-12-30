@@ -2,7 +2,7 @@ const Database = require('sqlite-async')
 
 const getScoreSql = `
 SELECT 
-  user_id, 
+  CAST (user_id AS TEXT) as user_id, 
   sum(7 - score) as score
 FROM 
   games
@@ -15,7 +15,7 @@ ORDER BY
 async function getScores() {
   try {
     const db = await Database.open(process.env.DB_PATH);
-    const data = await db.all(getScoreSql)
+    const data = await db.all(getScoreSql);
     await db.close()
     return data;
   } catch (err) {
