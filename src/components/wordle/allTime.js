@@ -1,18 +1,38 @@
+const _ = require('underscore');
 const { getScores } = require('./getScores');
 
+async function calculateAllTimeLeaderboard(interaction) {
+  console.log(`Recieved a leaderboard request from ${interaction.user.username}`);
+  const scores = await getScores();
+  await interaction.reply({ 
+    embeds: [constructEmbed(scores)],
+    ephemeral: !interaction.options.getBoolean('broadcast')
+  });
+}
+
 function constructEmbed(data) {
-  const embed = {
+  let embed = {
     color: '#538d4e',
     author: { name: '🏆 All-time Wordle leaderboard' }
   }
 
-  embed.fields = data.map(({user_id, score}, index) => {
-    return {
-      name: getRank(index+1),
-      value: `<@${user_id}> \n ${score} points`,
+  const maxRank = _.max(data, 'rank').rank;
+
+  embed.fields = [];
+
+  for (let rank = 1; rank <= maxRank; rank++) {
+    const dataWithRank = _.filter(data, function(score) { return rank == score.rank });
+    const playersWithRank = dataWithRank.map((score) => { return `<@${score.user_id}>` }).join('\n');
+    const rankScore = dataWithRank[0].score;
+    
+    const embedField = {
+      name: getRank(rank),
       inline: true,
+      value: playersWithRank.concat('\n', `${rankScore} points`)
     }
-  });
+
+    embed.fields.push(embedField);
+  }
 
   return embed;
 }
@@ -31,19 +51,15 @@ function getRank(rank) {
     3: '🥉', 
   };
 
-  let rankText = `${ordinal(rank)} place`;
+  let rankText = `**${ordinal(rank)} place**`;
 
-  if (rank <= 3) { rankText = emojis[rank].concat(' ', rankText) };
+  if (rank <= 3) { 
+    rankText = emojis[rank].concat(' ', rankText) } 
+  else {
+    rankText = '\:star:'.concat(' ', rankText)
+  };
 
   return rankText;
-}
-
-async function calculateAllTimeLeaderboard(interaction) {
-  const scores = await getScores();
-  await interaction.reply({ 
-    embeds: [constructEmbed(scores)],
-    ephemeral: !interaction.options.getBoolean('broadcast')
-  });
 }
 
 module.exports = calculateAllTimeLeaderboard;
