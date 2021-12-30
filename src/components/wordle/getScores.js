@@ -3,7 +3,8 @@ const Database = require('sqlite-async')
 const getScoreSql = `
 SELECT 
   CAST (user_id AS TEXT) as user_id, 
-  sum(7 - score) as score
+  sum(7 - score) as score,
+  DENSE_RANK () OVER ( ORDER BY score ) rank 
 FROM 
   games
 GROUP BY
