@@ -4,13 +4,13 @@ const getScoreSql = `
 SELECT 
   CAST (user_id AS TEXT) as user_id, 
   sum(7 - score) as score,
-  DENSE_RANK () OVER ( ORDER BY score ) rank 
+  DENSE_RANK () OVER ( ORDER BY  sum(7 - score)  DESC  ) rank 
 FROM 
   games
 GROUP BY
   user_id
 ORDER BY
-	score DESC
+	score ASC
 `
 
 async function getScores() {
