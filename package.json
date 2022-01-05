@@ -7,7 +7,6 @@
     "test": "jest",
     "start": "node src/app",
     "start:dev": "nodemon",
-    "scheduled": "node src/scheduled",
     "deploy-commands": "node src/deploy-commands"
   },
   "repository": {
