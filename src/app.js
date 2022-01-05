@@ -3,7 +3,7 @@
 require("dotenv").config();
 
 const { initDb, initDiscordClient } = require('./init');
-const runHealthcheckServer = require('./components/healthcheck');
+const runHealthcheckServer = require('./healthcheck');
 const cronScheduledMessages = require('./scheduled');
 const { processScoreSubmit, wordleRegex } = require('./commands/wordle');
 
