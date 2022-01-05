@@ -36,15 +36,27 @@ function initDiscordClient() {
 		// With the key as the command name and the value as the exported module
 		client.commands.set(command.data.name, command);
 	}
+
+	// This runs on any slash command interaction 
+	client.on('interactionCreate', async interaction => {
+		if (!interaction.isCommand()) return;
+
+		const command = client.commands.get(interaction.commandName);
+
+		if (!command) return;
+
+		try {
+			await command.execute(interaction);
+		} catch (error) {
+			console.error(error);
+			await interaction.reply({ content: 'There was an error while executing this command!', ephemeral: true });
+		}
+	});
 	
 	return client
 }
 
-
-function init() {
-	initDb();
-	const client = initDiscordClient();
-	return client;
+module.exports = {
+	initDb,
+	initDiscordClient
 }
-
-module.exports = init;

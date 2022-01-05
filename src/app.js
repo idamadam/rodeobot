@@ -2,12 +2,14 @@
 
 require("dotenv").config();
 
-const init = require('./init');
+const { initDb, initDiscordClient } = require('./init');
 const runHealthcheckServer = require('./healthcheck');
 const { processScoreSubmit, wordleRegex } = require('./components/wordle/addScore');
 
 const DISCORD_KEY = process.env.DISCORD_KEY;
-const client = init();
+
+initDb();
+const client = initDiscordClient();
 
 client.login(DISCORD_KEY);
 
@@ -16,22 +18,9 @@ client.on('ready', () => {
 	runHealthcheckServer();
 });
 
-client.on('interactionCreate', async interaction => {
-	if (!interaction.isCommand()) return;
-
-	const command = client.commands.get(interaction.commandName);
-
-	if (!command) return;
-
-	try {
-		await command.execute(interaction);
-	} catch (error) {
-		console.error(error);
-		await interaction.reply({ content: 'There was an error while executing this command!', ephemeral: true });
-	}
-});
-
+// This runs on any message
 client.on('messageCreate', async message => {
+	// Check if the message matches the Wordle regex /Wordle \d* \d\/\d/
 	if (wordleRegex.test(message.content)) {
 		processScoreSubmit(message, client);
 	}
