@@ -4,28 +4,21 @@ require("dotenv").config();
 
 const friends = require("../../../friends.json");
 
-const getMessages = require("./getMessages");
-const sendOnReady = require("../sendOnReady");
+const { getBirthdayWishes, getReminders } = require("./getMessages");
 
-function processBirthdays(timezone) {
-  const channelId = process.env.GENERAL_CHANNEL_ID;
-  
-  const birthdayMessages = getMessages({ people: friends, timezone, messageType: "birthdays" });
-  const reminderMessages = getMessages({ people: friends, timezone, messageType: "reminders" });
+function buildBirthdayMessages(timezone) {
+  const birthdayWishes = getBirthdayWishes({ people: friends, timezone });
+  const reminders = getReminders({ people: friends, timezone });
 
-  const messages = [...birthdayMessages, ...reminderMessages]
+  const messages = [...reminders, ...birthdayWishes];
 
   if (messages.length == 0) {
     console.log("No birthday messages to send today.");
     return;
   }
 
-  sendOnReady({
-    channelId,
-    messages,
-  });
-
-  console.log(`Sent ${birthdayMessages.length} birthday messages & ${reminderMessages.length} birthday reminders.`);
+  console.log(`Sent ${birthdayWishes.length/2} birthday messages & ${reminders.length} birthday reminders.`);
+  return messages;
 }
 
-module.exports = processBirthdays;
+module.exports = buildBirthdayMessages;

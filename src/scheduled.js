@@ -1,12 +1,19 @@
 "use strict";
 
-const cron = require('node-cron');
-const sendBirthdayMessages = require("./components/processBirthdays");
+require("dotenv").config();
 
-function scheduledMessages() {
+const cron = require('node-cron');
+const buildBirthdayMessages = require("./components/processBirthdays");
+
+function scheduledMessages(client) {
   // Send a birthday message at 9am
   cron.schedule('0 9 * * * *', () => {
-    sendBirthdayMessages("Australia/Melbourne");
+    let messages = buildBirthdayMessages("Australia/Melbourne");
+
+    const channel = client.channels.cache.get(process.env.GENERAL_CHANNEL_ID);
+    messages.forEach((message) => {
+      channel.send(message)
+    })
   }, {
     scheduled: true,
     timezone: "Australia/Melbourne"

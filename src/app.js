@@ -5,7 +5,7 @@ require("dotenv").config();
 const { initDb, initDiscordClient } = require('./init');
 const runHealthcheckServer = require('./components/healthcheck');
 const { processScoreSubmit, wordleRegex } = require('./components/wordle/addScore');
-const runScheduledMessages = require('./scheduled');
+const cronScheduledMessages = require('./scheduled');
 
 const DISCORD_KEY = process.env.DISCORD_KEY;
 
@@ -16,7 +16,7 @@ client.login(DISCORD_KEY);
 
 client.on('ready', () => {
 	console.log('ready as ' + client.user.tag);
-	runScheduledMessages();
+	cronScheduledMessages(client);
 	runHealthcheckServer();
 });
 
@@ -26,4 +26,4 @@ client.on('messageCreate', async message => {
 	if (wordleRegex.test(message.content)) {
 		processScoreSubmit(message, client);
 	}
-})
+});
