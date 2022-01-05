@@ -3,7 +3,7 @@
 require("dotenv").config();
 
 const cron = require('node-cron');
-const buildBirthdayMessages = require("./components/processBirthdays");
+const buildBirthdayMessages = require("./birthdays");
 
 function scheduledMessages(client) {
   // Send a birthday message at 9am
