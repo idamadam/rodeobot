@@ -12,7 +12,7 @@ function getMessages({ people, timezone, messageType = "birthdays" }) {
   }
 
   const filteredList = people.filter((person) => {
-    let birthday = spacetime(person.birthday, timezone);
+    let birthday = spacetime(`${person.birthday} ${filterTime.year()}`, timezone);
     return filterTime.isSame(birthday, "day");
   });
 
