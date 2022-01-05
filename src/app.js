@@ -4,8 +4,8 @@ require("dotenv").config();
 
 const { initDb, initDiscordClient } = require('./init');
 const runHealthcheckServer = require('./components/healthcheck');
-const { processScoreSubmit, wordleRegex } = require('./components/wordle/addScore');
 const cronScheduledMessages = require('./scheduled');
+const { processScoreSubmit, wordleRegex } = require('./commands/wordle');
 
 const DISCORD_KEY = process.env.DISCORD_KEY;
 
