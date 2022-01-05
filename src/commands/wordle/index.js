@@ -1,6 +1,6 @@
 const { SlashCommandBuilder } = require('@discordjs/builders');
 const { all } = require('underscore');
-const allTime = require('../components/wordle/allTime');
+const allTime = require('../../components/wordle/allTime');
 
 const data = new SlashCommandBuilder()
 	.setName('wordle')

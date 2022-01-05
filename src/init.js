@@ -28,14 +28,16 @@ function initDiscordClient() {
 	});
 	
 	client.commands = new Collection();
-	const commandFiles = fs.readdirSync('./src/commands').filter(file => file.endsWith('.js'));
+	const commandDirs = fs.readdirSync('./src/commands', { withFileTypes: true })
+													.filter(dirent => dirent.isDirectory())
+													.map(dirent => dirent.name);
 	
-	for (const file of commandFiles) {
-		const command = require(`./commands/${file}`);
+	commandDirs.forEach(dirent => {
+		const command = require(`./commands/${dirent}`);
 		// Set a new item in the Collection
 		// With the key as the command name and the value as the exported module
 		client.commands.set(command.data.name, command);
-	}
+	});
 
 	// This runs on any slash command interaction 
 	client.on('interactionCreate', async interaction => {
