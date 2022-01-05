@@ -2,13 +2,11 @@
 
 require("dotenv").config();
 
-const friends = require("../../../friends.json");
-
 const { getBirthdayWishes, getReminders } = require("./getMessages");
 
-function buildBirthdayMessages(timezone) {
-  const birthdayWishes = getBirthdayWishes({ people: friends, timezone });
-  const reminders = getReminders({ people: friends, timezone });
+function buildBirthdayMessages(data, timezone) {
+  const birthdayWishes = getBirthdayWishes({ people: data, timezone });
+  const reminders = getReminders({ people: data, timezone });
 
   const messages = [...reminders, ...birthdayWishes];
 
