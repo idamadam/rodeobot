@@ -6,7 +6,7 @@ function buildLeaderboard(scores, rankCount = 1) {
   
   let leaderboard = [];
 
-  // Iterate over every rank and construct an embed field for each rank
+  // Iterate over every rank and rebuild the array with the adjusted rank
   for (let rank = 1; rank <= maxRank; rank++) {
     const scoresWithRank = _.filter(scores, score => rank == score.rank);
     const playersWithRank = scoresWithRank.map(score => score.user_id);
