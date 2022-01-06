@@ -2,7 +2,7 @@ const _ = require('underscore');
 const buildLeaderboard = require('./buildLeaderboard');
 const getRankText = require('./getRankText');
 
-async function calculateAllTimeLeaderboard(interaction, scores) {
+async function sendAllTimeLeaderboard(interaction, scores) {
   console.log(`Recieved a leaderboard request from ${interaction.user.username}`);
   const leaderboard = buildLeaderboard(scores);
 
@@ -38,6 +38,6 @@ function buildLeaderboardEmbedFields(leaderboard) {
 }
 
 module.exports = {
-  calculateAllTimeLeaderboard,
+  sendAllTimeLeaderboard,
   buildLeaderboard
 };
