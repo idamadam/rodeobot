@@ -1,34 +1,33 @@
 const _ = require('underscore');
-const { getScores } = require('./getScores');
 
-async function calculateAllTimeLeaderboard(interaction) {
+async function calculateAllTimeLeaderboard(interaction, scores) {
   console.log(`Recieved a leaderboard request from ${interaction.user.username}`);
-  const scores = await getScores();
-  await interaction.reply({ 
-    embeds: [constructEmbed(scores)],
-    ephemeral: !interaction.options.getBoolean('broadcast')
-  });
-}
 
-function constructEmbed(data) {
   // Start constructing the leaderboard embed
   let embed = {
     color: '#538d4e',
     author: { name: '🏆 All-time Wordle leaderboard' }
   }
 
-  // Determine the maximum rank, this is used in the for loop below
-  const maxRank = _.max(data, 'rank').rank;
+  embed.fields = buildLeaderboard(scores);
 
-  // Initialise the fields in the embed, each object in the array will be a place
-  embed.fields = [];
-  let rankCount = 1;
+  await interaction.reply({ 
+    embeds: [embed],
+    ephemeral: !interaction.options.getBoolean('broadcast')
+  });
+}
+
+function buildLeaderboard(scores, rankCount = 1) {
+  // Determine the maximum rank, this is used in the for loop below
+  const maxRank = _.max(scores, 'rank').rank;
+  
+  let fields = [];
 
   // Iterate over every rank and construct an embed field for each rank
   for (let rank = 1; rank <= maxRank; rank++) {
-    const dataWithRank = _.filter(data, function(score) { return rank == score.rank });
-    const playersWithRank = dataWithRank.map((score) => { return `<@${score.user_id}>` }).join('\n');
-    const rankScore = dataWithRank[0].score;
+    const scoresWithRank = _.filter(scores, function(score) { return rank == score.rank });
+    const playersWithRank = scoresWithRank.map((score) => { return `<@${score.user_id}>` }).join('\n');
+    const rankScore = scoresWithRank[0].score;
     
     const embedField = {
       name: getRankText(rankCount),
@@ -37,13 +36,12 @@ function constructEmbed(data) {
     }
 
     // Add to rank depending on how many people are within a rank.
-    rankCount = rankCount + dataWithRank.length;
-    embed.fields.push(embedField);
+    rankCount = rankCount + scoresWithRank.length;
+    fields.push(embedField);
   }
 
-  return embed;
+  return fields;
 }
-
 
 function getRankText(rank) {
   function ordinal(n) {
@@ -69,4 +67,7 @@ function getRankText(rank) {
   return rankText;
 }
 
-module.exports = calculateAllTimeLeaderboard;
+module.exports = {
+  calculateAllTimeLeaderboard,
+  buildLeaderboard
+};
