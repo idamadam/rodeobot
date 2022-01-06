@@ -8,11 +8,11 @@ function buildLeaderboard(scores, rankCount = 1) {
 
   // Iterate over every rank and rebuild the array with the adjusted rank
   for (let rank = 1; rank <= maxRank; rank++) {
-    const scoresWithRank = _.filter(scores, score => rank == score.rank);
-    const playersWithRank = scoresWithRank.map(score => score.user_id);
-    const rankScore = scoresWithRank[0].score;
+    const scoresWithRank = scores.filter(score => rank == score.rank);
+    const players = scoresWithRank.map(score => score.user_id);
+    const rankScore = scores[0].score;
 
-    playersWithRank.forEach(playerId => {
+    players.forEach(playerId => {
       leaderboard.push({
         rank: rankCount,
         score: rankScore,
