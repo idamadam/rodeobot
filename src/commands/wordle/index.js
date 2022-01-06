@@ -1,6 +1,6 @@
 const { SlashCommandBuilder } = require('@discordjs/builders');
-const { all } = require('underscore');
-const allTime = require('../components/wordle/allTime');
+const allTime = require('./allTime');
+const { processScoreSubmit, wordleRegex } = require('./addScore');
 
 const data = new SlashCommandBuilder()
 	.setName('wordle')
@@ -27,5 +27,7 @@ async function execute(interaction) {
 
 module.exports = {
   data: data,
-  execute
+  execute,
+  processScoreSubmit, 
+  wordleRegex
 };

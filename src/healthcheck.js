@@ -7,10 +7,10 @@ const app = express();
 
 function healthcheck() {
   app.get("/healthz", (req, res) => {
-    res.json({ status: "UP" });
+    res.status(200).send('Healthy')
   });
   
-  app.listen(PORT, () => {});  
+  app.listen(PORT);  
 }
 
 module.exports = healthcheck;

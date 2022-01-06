@@ -2,71 +2,28 @@
 
 require("dotenv").config();
 
-const fs = require('fs');
-const { Client, Collection, Intents } = require("discord.js");
-const Database = require('sqlite-async');
-
-const Healthcheck = require('./healthcheck');
-const { processScoreSubmit, wordleRegex } = require('./components/wordle/addScore');
-
-Healthcheck();
-
-Database.open(process.env.DB_PATH)
-	.then(db => {
-		db.run(`CREATE TABLE IF NOT EXISTS games (
-			"id"	TEXT NOT NULL,
-			"user_id"	INTEGER NOT NULL,
-			"day"	INTEGER NOT NULL,
-			"timestamp"	TEXT NOT NULL,
-			"score"	INTEGER NOT NULL,
-			PRIMARY KEY("id")
-		)`)
-		db.close();
-	})
-	.catch(error => {
-		throw error
-	});
+const { initDb, initDiscordClient } = require('./init');
+const runHealthcheckServer = require('./healthcheck');
+const cronScheduledMessages = require('./scheduled');
+const { processScoreSubmit, wordleRegex } = require('./commands/wordle');
 
 const DISCORD_KEY = process.env.DISCORD_KEY;
 
-const client = new Client({
-  intents: [Intents.FLAGS.GUILDS, Intents.FLAGS.GUILD_MESSAGES],
-});
-
-client.commands = new Collection();
-const commandFiles = fs.readdirSync('./src/commands').filter(file => file.endsWith('.js'));
-
-for (const file of commandFiles) {
-	const command = require(`./commands/${file}`);
-	// Set a new item in the Collection
-	// With the key as the command name and the value as the exported module
-	client.commands.set(command.data.name, command);
-}
+initDb();
+const client = initDiscordClient();
 
 client.login(DISCORD_KEY);
 
 client.on('ready', () => {
-	console.log('ready as ' + client.user.tag)
+	console.log('ready as ' + client.user.tag);
+	cronScheduledMessages(client);
+	runHealthcheckServer();
 });
 
-
-client.on('interactionCreate', async interaction => {
-	if (!interaction.isCommand()) return;
-
-	const command = client.commands.get(interaction.commandName);
-
-	if (!command) return;
-
-	try {
-		await command.execute(interaction);
-	} catch (error) {
-		console.error(error);
-		await interaction.reply({ content: 'There was an error while executing this command!', ephemeral: true });
-	}
-});
-
+// This runs on any message
 client.on('messageCreate', async message => {
+	// Check if the message matches the Wordle regex /Wordle \d* \d\/\d/
 	if (wordleRegex.test(message.content)) {
 		processScoreSubmit(message, client);
 	}
-})
+});

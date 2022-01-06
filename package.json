@@ -7,7 +7,6 @@
     "test": "jest",
     "start": "node src/app",
     "start:dev": "nodemon",
-    "scheduled": "node src/scheduled",
     "deploy-commands": "node src/deploy-commands"
   },
   "repository": {
@@ -28,6 +27,7 @@
     "discord.js": "^13.3.1",
     "dotenv": "^8.2.0",
     "express": "^4.17.1",
+    "node-cron": "^3.0.0",
     "node-fetch": "^2.6.1",
     "spacetime": "^6.6.4",
     "sqlite-async": "^1.1.2",
@@ -35,7 +35,8 @@
     "uwuifier": "^4.0.4"
   },
   "devDependencies": {
-    "jest": "^26.6.0",
+    "@types/jest": "^27.4.0",
+    "jest": "^27.4.6",
     "nodemon": "^2.0.15"
   }
 }
