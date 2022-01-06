@@ -20,8 +20,8 @@ function buildLeaderboard(scores, rankCount = 1) {
       })
     })
 
-      // Add to rank depending on how many people are within a rank.
-      rankCount = rankCount + scoresWithRank.length;
+    // Add to rank depending on how many people are within a rank.
+    rankCount = rankCount + scoresWithRank.length;
   }
 
   return leaderboard;
