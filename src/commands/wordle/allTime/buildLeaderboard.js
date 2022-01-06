@@ -18,7 +18,7 @@ function buildLeaderboard(scores, rankCount = 1) {
         score: rankScore,
         user_id: playerId
       })
-    })
+    });
 
     // Add to rank depending on how many people are within a rank.
     rankCount = rankCount + scoresWithRank.length;
