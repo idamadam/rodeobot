@@ -2,14 +2,20 @@ const _ = require('underscore');
 const buildLeaderboard = require('./buildLeaderboard');
 const getRankText = require('./getRankText');
 
-async function sendAllTimeLeaderboard(interaction, scores) {
-  console.log(`Recieved a leaderboard request from ${interaction.user.username}`);
+async function sendLeaderboard(interaction, scores, type = "all-time") {
+
+  const requestType = (interaction.options.getBoolean('broadcast')) ? 'public' : 'private'
+
+  console.log(`Recieved a ${requestType} ${type} leaderboard request from ${interaction.user.username}`);
   const leaderboard = buildLeaderboard(scores);
+
+  // This creates a capitalised version of the Leaderboard type
+  const leaderBoardTypeString = type.charAt(0).toUpperCase() + type.slice(1);
 
   await interaction.reply({ 
     embeds: [{
-      color: '#538d4e',
-      author: { name: '🏆 All-time Wordle leaderboard' },
+      color: (type=='all-time') ? '#538d4e' : '#0096FF',
+      author: { name: `🏆 ${leaderBoardTypeString} Wordle leaderboard` },
       fields: buildLeaderboardEmbedFields(leaderboard)
     }],
     ephemeral: !interaction.options.getBoolean('broadcast')
@@ -38,6 +44,6 @@ function buildLeaderboardEmbedFields(leaderboard) {
 }
 
 module.exports = {
-  sendAllTimeLeaderboard,
+  sendLeaderboard,
   buildLeaderboard
 };
