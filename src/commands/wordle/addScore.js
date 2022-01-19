@@ -1,6 +1,8 @@
 const Database = require('sqlite-async');
 const crypto = require('crypto');
-const { getScoreSql } = require('./getScores');
+const { getScores } = require('./getScores');
+const { buildLeaderboard } = require('./allTime');
+const emojis = require('./emojiDictionary');
 
 const wordleRegex = /Wordle \d* \d\/\d/;
 
@@ -12,8 +14,12 @@ async function processScoreSubmit(message, client) {
   message.react('👀');
   
   try {
-    await addScore({ user_id: message.author.id, day: day, score: score });
+    await writeScoreToDb({ user_id: message.author.id, day: day, score: score });
     message.react('✅');
+    // Functionality for later, this will react with an emoji with the rank.
+    // const leaderboard = buildLeaderboard(await getScores());
+    // const playerEntry = leaderboard.filter(entry => entry.user_id == message.author.id )[0]
+    // message.react(emojis[playerEntry.rank]);
     console.log(`Saved Wordle score for ${message.author.username}. Game #${day} - Score ${score}/6`);
   } catch(error) {
     message.react('🚫');
@@ -34,7 +40,7 @@ async function processScoreSubmit(message, client) {
   }
 }
 
-async function addScore({ user_id, day, score }) {
+async function writeScoreToDb({ user_id, day, score }) {
   const entryId = crypto.createHash('md5').update(`${user_id} ${day}`).digest('hex');
 
   const sql = `INSERT INTO 
@@ -44,9 +50,6 @@ async function addScore({ user_id, day, score }) {
 
   const db = await Database.open(process.env.DB_PATH);
   await db.run(sql)
-  // TODO: Do something with the returned the score.
-  const data = await db.all(getScoreSql)
-  // console.log(data);
   await db.close();
 }
 
