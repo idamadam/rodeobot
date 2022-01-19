@@ -4,7 +4,9 @@ const getRankText = require('./getRankText');
 
 async function sendLeaderboard(interaction, scores, type = "all-time") {
 
-  console.log(`Recieved a ${type} leaderboard request from ${interaction.user.username}`);
+  const requestType = (interaction.options.getBoolean('broadcast')) ? 'public' : 'private'
+
+  console.log(`Recieved a ${requestType} ${type} leaderboard request from ${interaction.user.username}`);
   const leaderboard = buildLeaderboard(scores);
 
   // This creates a capitalised version of the Leaderboard type

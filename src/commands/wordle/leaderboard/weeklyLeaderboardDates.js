@@ -10,9 +10,6 @@ function calculateWeeklyLeaderboardDates() {
   const nextSunday = prevSunday.add(6, 'days').time('11:59pm');
 
   const dates = [ prevSunday.goto('UTC').format(dateFormat), nextSunday.goto('UTC').format(dateFormat) ];
-
-  console.log(dates);
-
   return dates;
 }
 
