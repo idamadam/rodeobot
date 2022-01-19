@@ -1,6 +1,7 @@
 const { SlashCommandBuilder } = require('@discordjs/builders');
-const allTime = require('./allTime');
+const { sendAllTimeLeaderboard } = require('./allTime');
 const { processScoreSubmit, wordleRegex } = require('./addScore');
+const { getScores } = require('./getScores');
 
 const data = new SlashCommandBuilder()
 	.setName('wordle')
@@ -19,7 +20,8 @@ const data = new SlashCommandBuilder()
 async function execute(interaction) {
   switch (interaction.options.getSubcommand()) {
     case 'all-time-leaderboard':
-      await allTime(interaction);
+      const scores = await getScores();
+      await sendAllTimeLeaderboard(interaction, scores);
       break;
   }
   
