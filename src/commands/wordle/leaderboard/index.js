@@ -14,7 +14,7 @@ async function sendLeaderboard(interaction, scores, type = "all-time") {
 
   await interaction.reply({ 
     embeds: [{
-      color: '#538d4e',
+      color: (type=='all-time') ? '#538d4e' : '#0096FF',
       author: { name: `🏆 ${leaderBoardTypeString} Wordle leaderboard` },
       fields: buildLeaderboardEmbedFields(leaderboard)
     }],
