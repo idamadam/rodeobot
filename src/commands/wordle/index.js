@@ -1,5 +1,5 @@
 const { SlashCommandBuilder } = require('@discordjs/builders');
-const { sendAllTimeLeaderboard } = require('./allTime');
+const { sendAllTimeLeaderboard } = require('./leaderboard');
 const { processScoreSubmit, wordleRegex } = require('./addScore');
 const { getScores } = require('./getScores');
 
@@ -10,6 +10,16 @@ const data = new SlashCommandBuilder()
     subcommand
       .setName('all-time-leaderboard')
       .setDescription('Calculate the all-time leaderboard')
+      .addBooleanOption(option => 
+          option.setName('broadcast')
+          .setDescription('Broadcast to the group or view privately')
+          .setRequired(true)
+      )
+  )
+	.addSubcommand(subcommand => 
+    subcommand
+      .setName('weekly-leaderboard')
+      .setDescription('Calculate the weekly leaderboard')
       .addBooleanOption(option => 
           option.setName('broadcast')
           .setDescription('Broadcast to the group or view privately')
