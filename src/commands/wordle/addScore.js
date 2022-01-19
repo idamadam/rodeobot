@@ -1,9 +1,5 @@
 const Database = require('sqlite-async');
 const crypto = require('crypto');
-const { getScores } = require('./leaderboard/getScores');
-const { buildLeaderboard } = require('./leaderboard');
-const emojis = require('./emojiDictionary');
-
 const wordleRegex = /Wordle \d* \d\/\d/;
 
 async function processScoreSubmit(message, client) {
@@ -16,10 +12,6 @@ async function processScoreSubmit(message, client) {
   try {
     await writeScoreToDb({ user_id: message.author.id, day: day, score: score });
     message.react('✅');
-    // Functionality for later, this will react with an emoji with the rank.
-    // const leaderboard = buildLeaderboard(await getScores());
-    // const playerEntry = leaderboard.filter(entry => entry.user_id == message.author.id )[0]
-    // message.react(emojis[playerEntry.rank]);
     console.log(`Saved Wordle score for ${message.author.username}. Game #${day} - Score ${score}/6`);
   } catch(error) {
     message.react('🚫');
