@@ -1,6 +1,6 @@
 const Database = require('sqlite-async');
 const crypto = require('crypto');
-const { getScores } = require('./getScores');
+const { getScores } = require('./leaderboard/getScores');
 const { buildLeaderboard } = require('./leaderboard');
 const emojis = require('./emojiDictionary');
 

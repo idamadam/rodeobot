@@ -1,7 +1,7 @@
 const { SlashCommandBuilder } = require('@discordjs/builders');
-const { sendAllTimeLeaderboard } = require('./leaderboard');
+const { sendLeaderboard } = require('./leaderboard');
 const { processScoreSubmit, wordleRegex } = require('./addScore');
-const { getScores } = require('./getScores');
+const { getScores } = require('./leaderboard/getScores');
 
 const data = new SlashCommandBuilder()
 	.setName('wordle')
@@ -30,8 +30,12 @@ const data = new SlashCommandBuilder()
 async function execute(interaction) {
   switch (interaction.options.getSubcommand()) {
     case 'all-time-leaderboard':
-      const scores = await getScores();
-      await sendAllTimeLeaderboard(interaction, scores);
+      const allTimeScores = await getScores('all-time');
+      await sendLeaderboard(interaction, allTimeScores, "all-time");
+      break;
+    case 'weekly-leaderboard':
+      const weeklyScores = await getScores('weekly');
+      await sendLeaderboard(interaction, weeklyScores, "weekly");
       break;
   }
   
