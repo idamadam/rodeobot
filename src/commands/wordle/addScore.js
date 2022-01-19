@@ -1,7 +1,7 @@
 const Database = require('sqlite-async');
 const crypto = require('crypto');
 const { getScores } = require('./getScores');
-const { buildLeaderboard } = require('./allTime');
+const { buildLeaderboard } = require('./leaderboard');
 const emojis = require('./emojiDictionary');
 
 const wordleRegex = /Wordle \d* \d\/\d/;
