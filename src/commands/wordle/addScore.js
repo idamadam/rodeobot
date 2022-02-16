@@ -13,6 +13,16 @@ async function processScoreSubmit(message, client) {
     await writeScoreToDb({ user_id: message.author.id, day: day, score: score });
     message.react('✅');
     console.log(`Saved Wordle score for ${message.author.username}. Game #${day} - Score ${score}/6`);
+
+    switch(score) {
+      case '2':
+        message.react('🔥');
+        break;
+      case '6':
+        const oofEmoji = message.guild.emojis.cache.find(emoji => emoji.name === 'oof');
+        message.react(oofEmoji);
+        break;
+    }
   } catch(error) {
     message.react('🚫');
     const channel = client.channels.cache.get(message.channelId);
