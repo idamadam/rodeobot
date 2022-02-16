@@ -6,8 +6,8 @@ async function processScoreSubmit(message, client) {
   const wordleStringArray = message.content.match(/Wordle \d* \d\/\d/)[0].split(' ')
   const day = wordleStringArray[1]
   const score = wordleStringArray[2].charAt(0);
-  
-  message.react('👀');
+  const cowboyEyesEmoji = message.guild.emojis.cache.find(emoji => emoji.name === 'cowboyeyes');
+  message.react(cowboyEyesEmoji);
   
   try {
     await writeScoreToDb({ user_id: message.author.id, day: day, score: score });
