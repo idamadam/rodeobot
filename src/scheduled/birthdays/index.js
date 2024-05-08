@@ -12,10 +12,10 @@ function buildBirthdayMessages(data, timezone) {
 
   if (messages.length == 0) {
     console.log("No birthday messages to send today.");
-    return;
+    return messages;
   }
 
-  console.log(`Sent ${birthdayWishes.length/2} birthday messages & ${reminders.length} birthday reminders.`);
+  console.log(`Built ${birthdayWishes.length/2} birthday messages & ${reminders.length} birthday reminders.`);
   return messages;
 }
 
