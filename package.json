@@ -1,34 +1,16 @@
 {
   "name": "rodeobot",
   "version": "1.0.0",
-  "description": "Discord bot for Friends Rodeo",
-  "main": "src/app.js",
+  "main": "index.js",
   "scripts": {
-    "test": "jest",
-    "start": "node src/app",
-    "start:dev": "nodemon",
-    "deploy-commands": "node src/deploy-commands"
+    "test": "echo \"Error: no test specified\" && exit 1"
   },
-  "repository": {
-    "type": "git",
-    "url": "git+https://github.com/idamadam/rodeobot.git"
-  },
-  "author": "Idam Adam",
+  "author": "",
   "license": "ISC",
-  "bugs": {
-    "url": "https://github.com/idamadam/rodeobot/issues"
-  },
-  "homepage": "https://github.com/idamadam/rodeobot#readme",
+  "description": "",
   "dependencies": {
-    "discord.js": "^13.3.1",
-    "dotenv": "^8.2.0",
-    "express": "^4.17.1",
-    "spacetime": "^6.6.4",
-    "underscore": "^1.11.0"
-  },
-  "devDependencies": {
-    "@types/jest": "^27.4.0",
-    "jest": "^27.4.6",
-    "nodemon": "^2.0.15"
+    "discord.js": "^14.16.3",
+    "dotenv": "^16.4.5",
+    "spacetime": "^7.6.1"
   }
 }
