@@ -21,11 +21,19 @@ jobs:
       with:
         node-version: 'lts/*'
     
+    - name: Debug - Display Node.js and npm versions
+      run: |
+        node --version
+        npm --version
+    
     - name: Install dependencies
       run: npm ci
       
     - name: Create friends.json from secret
-      run: echo '${{ secrets.FRIENDS_JSON }}' > friends.json
+      run: |
+        cat << EOF > friends.json
+        ${{ secrets.FRIENDS_JSON }}
+        EOF
     
     - name: Run Birthday Bot
       env:
