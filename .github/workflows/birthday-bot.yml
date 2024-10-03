@@ -27,11 +27,24 @@ jobs:
       with:
         node-version: '14'
     
+    - name: Debug - Display Node.js and npm versions
+      run: |
+        node --version
+        npm --version
+    
     - name: Install dependencies
-      run: npm ci
+      run: |
+        npm install
+        npm ls --depth=0
       
+    - name: Debug - List node_modules
+      run: ls -la node_modules
+    
     - name: Create friends.json from secret
       run: echo '${{ secrets.FRIENDS_JSON }}' > friends.json
+    
+    - name: Debug - Display index.js content
+      run: cat index.js || echo "index.js not found"
     
     - name: Run Birthday Bot
       env:
@@ -40,15 +53,15 @@ jobs:
       run: |
         if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
           echo "Manual run triggered: ${{ github.event.inputs.reason }}"
-          node index.js
+          node --trace-warnings index.js
         else
           if [ "$(TZ='Australia/Melbourne' date +%Z)" = "AEDT" ]; then
             if [ "$(TZ='UTC' date +%H)" = "23" ]; then
-              node index.js
+              node --trace-warnings index.js
             fi
           else
             if [ "$(TZ='UTC' date +%H)" = "22" ]; then
-              node index.js
+              node --trace-warnings index.js
             fi
           fi
         fi
