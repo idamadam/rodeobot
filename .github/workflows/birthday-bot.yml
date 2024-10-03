@@ -30,10 +30,31 @@ jobs:
       run: npm ci
       
     - name: Create friends.json from secret
+      env:
+        FRIENDS_JSON: ${{ secrets.FRIENDS_JSON }}
       run: |
-        cat << EOF > friends.json
-        ${{ secrets.FRIENDS_JSON }}
-        EOF
+        node -e "
+          const fs = require('fs');
+          const friendsData = process.env.FRIENDS_JSON;
+          console.log('Secret length:', friendsData.length);
+          console.log('First 10 characters:', friendsData.substring(0, 10) + '...');
+          try {
+            const parsedData = JSON.parse(friendsData);
+            console.log('JSON parsed successfully');
+            console.log('Number of friends:', Object.keys(parsedData).length);
+            fs.writeFileSync('friends.json', JSON.stringify(parsedData, null, 2));
+            console.log('friends.json written successfully');
+          } catch (error) {
+            console.error('Error parsing JSON:', error.message);
+          }
+        "
+    
+    - name: Debug - Check friends.json
+      run: |
+        echo "Friends.json file size:"
+        ls -l friends.json
+        echo "First few lines of friends.json structure:"
+        head -n 5 friends.json | sed 's/[^{}[],]/_/g'
     
     - name: Run Birthday Bot
       env:
