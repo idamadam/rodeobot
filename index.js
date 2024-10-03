@@ -3,7 +3,17 @@
 require("dotenv").config();
 const spacetime = require("spacetime");
 const { Client, GatewayIntentBits } = require('discord.js');
-const friends = require("./friends.json");
+
+let friends;
+try {
+  // Remove the EOF markers and any leading/trailing whitespace
+  const friendsData = process.env.FRIENDS_DATA.replace(/(^<<EOF\s*|\s*EOF$)/gm, '').trim();
+  friends = JSON.parse(friendsData);
+  console.log(`Loaded data for ${friends.length} friends.`);
+} catch (error) {
+  console.error('Error parsing FRIENDS_DATA:', error);
+  process.exit(1);
+}
 
 const BirthdayBot = {
   TIMEZONE: "Australia/Melbourne",
