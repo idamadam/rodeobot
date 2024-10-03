@@ -1,0 +1,46 @@
+name: Birthday Bot
+
+on:
+  schedule:
+    - cron: '0 22,23 * * *'
+  workflow_dispatch:
+    inputs:
+      reason:
+        description: 'Reason for manual run'
+        required: false
+        default: 'Manual trigger'
+
+jobs:
+  run-script:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v2
+    - name: Use Node.js
+      uses: actions/setup-node@v2
+      with:
+        node-version: '14'
+    - run: npm ci
+    - name: Create friends.json from secret
+      run: echo '${{ secrets.FRIENDS_JSON }}' > friends.json
+    - name: Run Birthday Bot
+      env:
+        DISCORD_BOT_TOKEN: ${{ secrets.DISCORD_BOT_TOKEN }}
+        GENERAL_CHANNEL_ID: ${{ secrets.GENERAL_CHANNEL_ID }}
+      run: |
+        if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+          echo "Manual run triggered: ${{ github.event.inputs.reason }}"
+          node index.js
+        else
+          if [ "$(TZ='Australia/Melbourne' date +%Z)" = "AEDT" ]; then
+            if [ "$(TZ='UTC' date +%H)" = "23" ]; then
+              node index.js
+            fi
+          else
+            if [ "$(TZ='UTC' date +%H)" = "22" ]; then
+              node index.js
+            fi
+          fi
+        fi
+    - name: Clean up friends.json
+      if: always()
+      run: rm friends.json
