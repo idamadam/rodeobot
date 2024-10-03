@@ -29,23 +29,29 @@ jobs:
     - name: Install dependencies
       run: npm ci
       
-    - name: Create friends.json from secret
+    - name: Debug - Check secret accessibility
+      run: |
+        echo "Secret starts with: ${FRIENDS_JSON:0:10}..."
+        echo "Secret length: ${#FRIENDS_JSON}"
       env:
         FRIENDS_JSON: ${{ secrets.FRIENDS_JSON }}
+    
+    - name: Create friends.json from secret
       run: |
         node -e "
           const fs = require('fs');
-          const friendsData = process.env.FRIENDS_JSON;
+          const friendsData = '${{ secrets.FRIENDS_JSON }}';
           console.log('Secret length:', friendsData.length);
           console.log('First 10 characters:', friendsData.substring(0, 10) + '...');
           try {
             const parsedData = JSON.parse(friendsData);
             console.log('JSON parsed successfully');
-            console.log('Number of friends:', Object.keys(parsedData).length);
+            console.log('Number of friends:', Array.isArray(parsedData) ? parsedData.length : Object.keys(parsedData).length);
             fs.writeFileSync('friends.json', JSON.stringify(parsedData, null, 2));
             console.log('friends.json written successfully');
           } catch (error) {
             console.error('Error parsing JSON:', error.message);
+            console.error('Received data:', friendsData);
           }
         "
     
