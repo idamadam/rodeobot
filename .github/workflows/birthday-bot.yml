@@ -21,11 +21,13 @@ jobs:
   run-birthday-bot:
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v4
     
-    - name: Use Node.js LTS
-      uses: actions/setup-node@v3
-    
+    - name: Use Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '20.17.0'
+
     - name: Install dependencies
       run: npm ci
     
@@ -40,19 +42,21 @@ jobs:
           echo "is_9am=false" >> $GITHUB_OUTPUT
         fi
         echo "Current time in Melbourne: $(TZ='Australia/Melbourne' date)"
+
+    - name: Create friends.json from secret
+      run: echo '${{ secrets.FRIENDS_JSON }}' > friends.json
     
     - name: Run Birthday Bot
       if: steps.melbourne-time.outputs.is_9am == 'true' || github.event.inputs.force_run == 'true'
       env:
         DISCORD_BOT_TOKEN: ${{ secrets.DISCORD_BOT_TOKEN }}
         GENERAL_CHANNEL_ID: ${{ secrets.GENERAL_CHANNEL_ID }}
-        FRIENDS_DATA: ${{ secrets.FRIENDS_DATA }}
       run: |
         echo "Running Birthday Bot at $(TZ='Australia/Melbourne' date)"
         echo "Node.js version: $(node -v)"
         echo "npm version: $(npm -v)"
         node index.js
 
-    - name: Log Skipped Run
-      if: steps.melbourne-time.outputs.is_9am != 'true' && github.event.inputs.force_run != 'true'
-      run: echo "Skipped running Birthday Bot as it's not 9 AM in Melbourne and force run was not selected."
+    - name: Clean up friends.json
+      if: always()
+      run: rm friends.json
