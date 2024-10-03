@@ -14,37 +14,18 @@ jobs:
   run-script:
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v2
+    - uses: actions/checkout@v3
     
-    - name: Debug - List directory contents
-      run: ls -la
-    
-    - name: Debug - Display package.json content
-      run: cat package.json || echo "package.json not found"
-    
-    - name: Use Node.js
-      uses: actions/setup-node@v2
+    - name: Use Node.js LTS
+      uses: actions/setup-node@v3
       with:
-        node-version: '14'
-    
-    - name: Debug - Display Node.js and npm versions
-      run: |
-        node --version
-        npm --version
+        node-version: 'lts/*'
     
     - name: Install dependencies
-      run: |
-        npm install
-        npm ls --depth=0
+      run: npm ci
       
-    - name: Debug - List node_modules
-      run: ls -la node_modules
-    
     - name: Create friends.json from secret
       run: echo '${{ secrets.FRIENDS_JSON }}' > friends.json
-    
-    - name: Debug - Display index.js content
-      run: cat index.js || echo "index.js not found"
     
     - name: Run Birthday Bot
       env:
@@ -53,15 +34,15 @@ jobs:
       run: |
         if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
           echo "Manual run triggered: ${{ github.event.inputs.reason }}"
-          node --trace-warnings index.js
+          node index.js
         else
           if [ "$(TZ='Australia/Melbourne' date +%Z)" = "AEDT" ]; then
             if [ "$(TZ='UTC' date +%H)" = "23" ]; then
-              node --trace-warnings index.js
+              node index.js
             fi
           else
             if [ "$(TZ='UTC' date +%H)" = "22" ]; then
-              node --trace-warnings index.js
+              node index.js
             fi
           fi
         fi
