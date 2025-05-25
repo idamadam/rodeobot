@@ -10,9 +10,9 @@
   "license": "ISC",
   "description": "",
   "dependencies": {
-    "discord.js": "^14.16.3",
-    "dotenv": "^16.4.5",
-    "spacetime": "^7.6.1"
+    "discord.js": "^14.19.3",
+    "dotenv": "^16.5.0",
+    "spacetime": "^7.10.0"
   },
   "devDependencies": {
     "@types/jest": "^29.5.14",
