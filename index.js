@@ -2,11 +2,25 @@
 
 require("dotenv").config();
 const { Client, GatewayIntentBits } = require('discord.js');
-const friends = require("./friends.json");
 const BirthdayService = require("./src/birthdayService");
+
+function loadFriends() {
+  const friendsEnv = process.env.FRIENDS_JSON;
+
+  if (!friendsEnv) {
+    throw new Error('FRIENDS_JSON environment variable is not set.');
+  }
+
+  try {
+    return JSON.parse(friendsEnv);
+  } catch (error) {
+    throw new Error(`Failed to parse FRIENDS_JSON: ${error.message}`);
+  }
+}
 
 async function sendBirthdayMessages() {
   const birthdayService = new BirthdayService();
+  const friends = loadFriends();
   const messages = birthdayService.getBirthdayMessages(friends);
 
   if (messages.length === 0) {
