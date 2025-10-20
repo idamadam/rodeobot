@@ -5,7 +5,8 @@
   "scripts": {
     "start": "node index.js",
     "test": "jest",
-    "test:watch": "jest --watch"
+    "test:watch": "jest --watch",
+    "deploy-commands": "node src/deploy-commands.js"
   },
   "author": "",
   "license": "ISC",
