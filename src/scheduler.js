@@ -40,9 +40,6 @@ async function startBirthdayScheduler({
     console.log("Discord client is ready, scheduling birthday reminders");
 
     // Schedule the cron job
-    console.log(
-        `DEBUG: Validating cron expression: ${cron.validate(cronSchedule)}`,
-    );
     const task = cron.schedule(
         cronSchedule,
         async () => {
@@ -69,7 +66,6 @@ async function startBirthdayScheduler({
     );
 
     console.log("Birthday scheduler started successfully");
-    console.log(`DEBUG: Task scheduled: ${task !== null}`);
 
     return task;
 }
