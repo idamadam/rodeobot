@@ -8,18 +8,29 @@ RodeoBot is a Discord bot that sends birthday messages and reminders for friends
 
 ## Architecture
 
+RodeoBot uses a **long-lived Discord client** architecture with a **cron-based scheduler**. The bot connects to Discord once at startup and remains connected, running scheduled birthday checks at configured intervals. Friend data is reloaded on each scheduled run to pick up configuration changes without requiring a restart.
+
 ### Core Components
 
-- **index.js**: Entry point that loads friend data from environment variable, initializes Discord client, and coordinates the birthday checking and message sending flow
+- **index.js**: Entry point that initializes the Discord client, creates the birthday service, and starts the scheduler. The process remains running to handle scheduled birthday checks.
+- **src/botClient.js**: Singleton Discord client manager. Handles client initialization, login, and ready state management. Exports `initClient()` and `getReadyClient()` helpers to ensure the client is logged in exactly once and ready before use. See [discord.js Client docs](https://discord.js.org/#/docs/discord.js/main/class/Client).
+- **src/scheduler.js**: Cron-based scheduler module using [node-cron](https://github.com/kelektiv/node-cron). Exports `startBirthdayScheduler()` which sets up a recurring job to check and send birthday messages. Defaults to daily at 08:00 in the configured timezone.
+- **src/reminders/sendBirthdayMessages.js**: Birthday reminder workflow module. Loads friend data, checks for birthdays, fetches the Discord channel using [`client.channels.fetch()`](https://discord.js.org/#/docs/discord.js/main/class/ChannelManager?scrollTo=fetch), validates the channel is text-based, and sends messages. Includes comprehensive error handling to prevent crashes on individual runs.
 - **src/birthdayService.js**: Contains `BirthdayService` class that handles birthday logic - checks if today is anyone's birthday or if there's an upcoming birthday within the reminder window (default 14 days)
 - **friends.json**: Sample data file (gitignored in production) - actual data is loaded from `FRIENDS_JSON` environment variable as JSON string
 
 ### Data Flow
 
-1. `loadFriends()` in index.js parses the `FRIENDS_JSON` environment variable
-2. `BirthdayService.getBirthdayMessages()` takes the friends array and returns an array of messages to send
-3. Messages are sent to Discord channel specified by `GENERAL_CHANNEL_ID` environment variable
-4. Bot exits after sending messages
+1. `index.js` calls `initClient()` to initialize the Discord client singleton
+2. Awaits `getReadyClient()` to ensure the client is fully ready before proceeding
+3. Creates a `BirthdayService` instance and calls `startBirthdayScheduler()`
+4. Scheduler waits for the client ready state, then schedules a cron job
+5. On each scheduled run:
+   - `sendBirthdayMessages()` reloads friend data from `FRIENDS_JSON` environment variable
+   - `BirthdayService.getBirthdayMessages()` checks for birthdays and returns messages to send
+   - Channel is fetched via `client.channels.fetch()` and validated as text-based
+   - Messages are sent to the Discord channel specified by `GENERAL_CHANNEL_ID`
+6. Process remains running, executing birthday checks on the configured schedule
 
 ### Environment Variables
 
@@ -27,6 +38,7 @@ Required environment variables:
 - `DISCORD_BOT_TOKEN`: Discord bot authentication token
 - `GENERAL_CHANNEL_ID`: Discord channel ID where messages are sent
 - `FRIENDS_JSON`: JSON string containing array of friend objects with `discordUsername` and `birthday` fields
+- `BIRTHDAY_CRON_SCHEDULE` (optional): Cron schedule string (defaults to `0 8 * * *` - daily at 08:00)
 
 ### Birthday Logic
 

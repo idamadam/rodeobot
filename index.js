@@ -1,52 +1,36 @@
 "use strict";
 
 require("dotenv").config();
-const { Client, GatewayIntentBits } = require('discord.js');
+const { initClient, getReadyClient } = require('./src/botClient');
 const BirthdayService = require("./src/birthdayService");
+const { startBirthdayScheduler } = require('./src/scheduler');
 
-function loadFriends() {
-  const friendsEnv = process.env.FRIENDS_JSON;
-
-  if (!friendsEnv) {
-    throw new Error('FRIENDS_JSON environment variable is not set.');
-  }
-
+async function run() {
   try {
-    return JSON.parse(friendsEnv);
-  } catch (error) {
-    throw new Error(`Failed to parse FRIENDS_JSON: ${error.message}`);
-  }
-}
+    // Initialize the Discord client (starts login process)
+    initClient();
 
-async function sendBirthdayMessages() {
-  const birthdayService = new BirthdayService();
-  const friends = loadFriends();
-  const messages = birthdayService.getBirthdayMessages(friends);
+    // Get the ready client
+    const client = await getReadyClient();
 
-  if (messages.length === 0) {
-    console.log('No messages to send today.');
-    return;
-  }
+    // Create birthday service instance
+    const birthdayService = new BirthdayService();
 
-  // Send messages
-  try {
-    const client = new Client({
-      intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildMessages]
+    // Get channel ID from environment
+    const channelId = process.env.GENERAL_CHANNEL_ID;
+
+    // Start the scheduler (keeps process alive)
+    await startBirthdayScheduler({
+      client,
+      birthdayService,
+      channelId
     });
 
-    await client.login(process.env.DISCORD_BOT_TOKEN);
-    const channel = client.channels.cache.get(process.env.GENERAL_CHANNEL_ID);
-    
-    for (const message of messages) {
-      await channel.send(message);
-    }
-
-    console.log('Messages sent successfully');
-    client.destroy();
+    console.log('RodeoBot is running. Press Ctrl+C to exit.');
   } catch (error) {
     console.error('Error:', error);
     process.exit(1);
   }
 }
 
-sendBirthdayMessages();
+run();
