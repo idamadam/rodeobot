@@ -9,6 +9,7 @@ A Discord bot that sends birthday messages and reminders for your friends. Rodeo
 - Runs on a configurable cron schedule
 - Timezone-aware (default: Australia/Melbourne)
 - Reloads friend data on each scheduled run (no restart needed for config changes)
+- **AI-powered `/ask` command** - Query Claude with conversation context for intelligent responses
 
 ## Architecture
 
@@ -61,6 +62,9 @@ BIRTHDAY_CRON_SCHEDULE=0 8 * * *
 ### Optional
 
 - **`BIRTHDAY_CRON_SCHEDULE`**: Cron schedule string for when to check birthdays. Defaults to `0 8 * * *` (daily at 08:00 in the configured timezone). See [Cron Syntax](#cron-syntax) below.
+- **`ANTHROPIC_API_KEY`**: Your Anthropic API key for the `/ask` command. Get this from the [Anthropic Console](https://console.anthropic.com/). Only required if you want to use the AI-powered `/ask` command.
+- **`CLIENT_ID`**: Discord application client ID (required for slash commands)
+- **`GUILD_ID`**: Discord guild/server ID (required for slash commands)
 
 ### Example FRIENDS_JSON
 
@@ -169,6 +173,77 @@ The `BIRTHDAY_CRON_SCHEDULE` uses standard cron syntax:
 - `0 8,20 * * *` - Twice daily at 08:00 and 20:00
 
 See the [node-cron documentation](https://github.com/kelektiv/node-cron) for more details.
+
+## Slash Commands
+
+RodeoBot supports Discord slash commands for interactive features.
+
+### Available Commands
+
+#### `/ask` - AI-Powered Question Answering
+
+Ask Claude (Anthropic's AI) a question with optional conversation context from the Discord channel.
+
+**Usage:**
+```
+/ask question:"What is the capital of France?" context:none
+/ask question:"What did we discuss earlier?" context:conversation
+```
+
+**Parameters:**
+- `question` (required): Your question for Claude
+- `context` (optional): How much conversation context to include
+  - `none` - Just answer the question without channel context
+  - `recent` - Include the last hour of messages
+  - `conversation` - Include the current conversation topic (default) - stops at 30-minute gaps
+  - `extended` - Include the last 50 messages
+
+**Requirements:**
+- `ANTHROPIC_API_KEY` must be set in your environment variables
+- Bot must have "Use Application Commands" permission
+
+**Context Optimization:**
+
+The `/ask` command is optimized for token efficiency. When fetching conversation context, it only includes:
+- Username
+- Message content
+- Timestamp (HH:MM format)
+
+This provides relevant context while minimizing API costs. Full Discord message metadata is filtered out.
+
+**Examples:**
+
+```
+# Simple question without context
+/ask question:"Explain quantum computing in simple terms" context:none
+
+# Question about recent conversation
+/ask question:"Who suggested the meeting time?" context:conversation
+
+# Question requiring more history
+/ask question:"Summarize today's discussion" context:extended
+```
+
+#### `/compliment` - Receive an Unhinged Compliment
+
+Get an absolutely unhinged compliment to brighten your day!
+
+**Usage:**
+```
+/compliment
+```
+
+### Deploying Slash Commands
+
+Slash commands are automatically deployed when the bot starts if `CLIENT_ID` and `GUILD_ID` are configured. You can also deploy them manually:
+
+```bash
+npm run deploy-commands
+```
+
+To get your `CLIENT_ID` and `GUILD_ID`:
+1. **CLIENT_ID**: Go to the [Discord Developer Portal](https://discord.com/developers/applications), select your application, and copy the "Application ID"
+2. **GUILD_ID**: Enable Developer Mode in Discord (User Settings > Advanced > Developer Mode), right-click your server, and select "Copy Server ID"
 
 ## Verifying the Bot Works
 
