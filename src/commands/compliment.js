@@ -48,7 +48,7 @@ async function handleCompliment(interaction) {
 
     // Send the compliment with eye contact (mention)
     await interaction.reply({
-      content: `<@${user.id}> ${compliment}`,
+      content: `<@${user.id}> ${compliment} 👁️👄👁️`,
       allowedMentions: { users: [user.id] }
     });
   } catch (error) {
