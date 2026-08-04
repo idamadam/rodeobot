@@ -1,16 +1,15 @@
 # Repository guidance
 
-RodeoBot is a CommonJS Node.js 24 application using Discord.js 14, node-cron 4, and spacetime 7.
+RodeoBot is an ECMAScript-module Cloudflare Worker running on two UTC Cron Triggers. It posts birthday announcements and 14-day reminders through a Discord incoming webhook. There is no HTTP route, persistent process, Discord.js client, slash-command workflow, database, or runtime dependency.
 
 ## Runtime flow
 
-1. `index.js` constructs `BirthdayService` and validates runtime configuration.
-2. `src/loadCommands.js` loads command modules from `src/commands`.
-3. `src/botClient.js` creates one Discord client with only the `Guilds` intent and resolves after `Events.ClientReady`.
-4. `src/scheduler.js` creates a timezone-aware cron task with overlap prevention.
-5. Each scheduled callback asks `src/reminders/sendBirthdayMessages.js` to validate friend data, generate messages, fetch a sendable channel, and send each message independently.
-
-Slash-command registration is an explicit deployment operation and must not be added back to normal startup.
+1. Cloudflare calls `src/worker.js` at 21:00 and 22:00 UTC.
+2. The Worker converts `controller.scheduledTime` to `Australia/Melbourne`; only the invocation at 08:00 local continues.
+3. `src/config.js` validates the two required secret bindings and canonical friend records.
+4. `src/birthdayService.js` calculates today's birthdays and dates exactly 14 calendar days away.
+5. `src/webhook.js` combines all blocks into one raw Discord webhook request with restricted mentions.
+6. Successful and no-op events call `controller.noRetry()`. Failures are logged without secret values and rethrown.
 
 ## Commands
 
@@ -19,22 +18,23 @@ npm ci
 npm test
 npm run test:watch
 npm run test:coverage
-npm run deploy-commands
-npm start
+npm run validate:config
+npm audit
+npm run deploy:dry-run
+npm run dev
+npm run deploy
 ```
-
-Both executable scripts load `.env` through Node's `--env-file-if-exists` option. Production hosts may provide environment variables directly.
 
 ## Testing conventions
 
-Tests use `node:test` and `node:assert/strict`. Prefer constructor or function dependency injection over module-loader mocks. Keep external Discord and scheduler calls behind small injected interfaces so unit tests remain offline and deterministic.
-
-Birthday tests inject a `nowProvider` into `BirthdayService`. Always add regression coverage for timezone boundaries, year rollover, or leap-day changes.
+Tests use `node:test` and `node:assert/strict`. Keep date calculation and payload construction pure, and inject `fetch` and loggers for deterministic offline tests. Always cover AEST and AEDT trigger behavior, year rollover, and leap-day changes.
 
 ## Configuration invariants
 
-- Discord channel, user, client, and guild identifiers are numeric snowflakes.
-- Friend birthdays use full `Month Day` strings.
-- `discordUserId` is the canonical friend field. `discordUsername` is compatibility-only and must contain a numeric ID.
-- Default schedule: `0 8 * * *` in `Australia/Melbourne`.
-- The production bot does not require `MessageContent` or any other privileged Gateway intent.
+- Required secrets: `DISCORD_WEBHOOK_URL` and `FRIENDS_JSON`.
+- `FRIENDS_JSON` is an array of canonical `{ "discordUserId", "birthday" }` records.
+- Discord user IDs are numeric 17–20 digit snowflakes.
+- Birthdays use full `Month Day` strings.
+- Delivery is fixed at 08:00 in `Australia/Melbourne`, with a 14-day reminder.
+- The webhook payload allows only the explicitly configured user mentions.
+- Secrets must never appear in tracked configuration, logs, or error messages.

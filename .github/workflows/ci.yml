@@ -19,4 +19,12 @@ jobs:
           cache: npm
       - run: npm ci
       - run: npm run test:coverage
+      - run: npm run validate:config
+        env:
+          DISCORD_WEBHOOK_URL: https://discord.com/api/webhooks/223456789012345678/ci-placeholder
+          FRIENDS_JSON: "[]"
       - run: npm audit
+      - run: npm run deploy:dry-run
+        env:
+          DISCORD_WEBHOOK_URL: https://discord.com/api/webhooks/223456789012345678/ci-placeholder
+          FRIENDS_JSON: "[]"

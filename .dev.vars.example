@@ -1,0 +1,5 @@
+# Treat this file as a template only. Never commit a real webhook URL.
+DISCORD_WEBHOOK_URL="https://discord.com/api/webhooks/223456789012345678/replace-with-webhook-token"
+
+# Discord user IDs are numeric snowflakes, not usernames or @handles.
+FRIENDS_JSON='[{"discordUserId":"123456789012345678","birthday":"August 13"}]'

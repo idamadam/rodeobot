@@ -1,59 +1,56 @@
-"use strict";
+import assert from "node:assert/strict";
+import { describe, it } from "node:test";
 
-const assert = require("node:assert/strict");
-const { afterEach, describe, it, mock } = require("node:test");
-const {
-  loadBotConfig,
-  loadDeploymentConfig,
+import {
+  loadWorkerConfig,
   parseFriends,
-} = require("../config");
+  validateWebhookUrl,
+} from "../config.js";
 
 const USER_ID = "123456789012345678";
-const CHANNEL_ID = "223456789012345678";
+const WEBHOOK_URL =
+  "https://discord.com/api/webhooks/223456789012345678/example-token";
 
-describe("configuration", () => {
-  afterEach(() => mock.restoreAll());
-
-  it("normalizes valid friend records", () => {
+describe("Worker configuration", () => {
+  it("normalizes canonical friend records", () => {
     assert.deepEqual(
       parseFriends(
-        JSON.stringify([{ discordUserId: USER_ID, birthday: "August 13" }]),
+        JSON.stringify([
+          { discordUserId: ` ${USER_ID} `, birthday: " August 13 " },
+        ]),
       ),
       [{ discordUserId: USER_ID, birthday: "August 13" }],
     );
   });
 
-  it("supports the legacy discordUsername field when it contains an ID", () => {
-    mock.method(console, "warn", () => {});
-
-    assert.deepEqual(
-      parseFriends(
-        JSON.stringify([{ discordUsername: USER_ID, birthday: "August 13" }]),
-      ),
-      [{ discordUserId: USER_ID, birthday: "August 13" }],
-    );
-  });
-
-  it("rejects usernames because Discord mentions require numeric IDs", () => {
+  it("rejects invalid friend containers and records", () => {
+    assert.throws(() => parseFriends("not json"), /valid JSON/);
+    assert.throws(() => parseFriends("{}"), /JSON array/);
+    assert.throws(() => parseFriends("[null]"), /must be an object/);
+    assert.throws(() => parseFriends("[{}]"), /discordUserId is required/);
     assert.throws(
       () =>
         parseFriends(
-          JSON.stringify([
-            { discordUserId: "@alice", birthday: "August 13" },
-          ]),
+          JSON.stringify([{ discordUserId: "@alice", birthday: "August 13" }]),
         ),
-      /must be a Discord user or channel ID/,
+      /Discord user ID/,
     );
   });
 
-  it("rejects non-array friend data and invalid birthdays", () => {
-    assert.throws(() => parseFriends("{}"), /must contain a JSON array/);
+  it("requires canonical IDs and valid full birthday dates", () => {
     assert.throws(
       () =>
         parseFriends(
-          JSON.stringify([{ discordUserId: USER_ID, birthday: "Feb 31" }]),
+          JSON.stringify([{ discordUsername: USER_ID, birthday: "August 13" }]),
         ),
-      /full "Month Day" format/,
+      /discordUserId is required/,
+    );
+    assert.throws(
+      () =>
+        parseFriends(
+          JSON.stringify([{ discordUserId: USER_ID, birthday: "Feb 29" }]),
+        ),
+      /full "Month Day"/,
     );
     assert.throws(
       () =>
@@ -62,31 +59,63 @@ describe("configuration", () => {
         ),
       /not a valid date/,
     );
+    assert.throws(
+      () =>
+        parseFriends(
+          JSON.stringify([{ discordUserId: USER_ID, birthday: null }]),
+        ),
+      /full "Month Day"/,
+    );
   });
 
-  it("loads and validates startup configuration", () => {
-    const env = {
-      DISCORD_BOT_TOKEN: "token",
-      GENERAL_CHANNEL_ID: CHANNEL_ID,
-      FRIENDS_JSON: JSON.stringify([
-        { discordUserId: USER_ID, birthday: "February 29" },
-      ]),
-    };
-
-    assert.deepEqual(loadBotConfig(env), {
-      token: "token",
-      channelId: CHANNEL_ID,
-    });
+  it("accepts Discord webhook URLs with current API paths", () => {
+    assert.equal(validateWebhookUrl(WEBHOOK_URL), WEBHOOK_URL);
+    assert.equal(
+      validateWebhookUrl(
+        "https://canary.discord.com/api/v10/webhooks/223456789012345678/token#ignored",
+      ),
+      "https://canary.discord.com/api/v10/webhooks/223456789012345678/token",
+    );
   });
 
-  it("loads command deployment configuration independently", () => {
+  it("rejects malformed, insecure, or unrelated webhook URLs", () => {
+    assert.throws(() => validateWebhookUrl("not a URL"), /valid URL/);
+    assert.throws(
+      () => validateWebhookUrl(WEBHOOK_URL.replace("https:", "http:")),
+      /Discord incoming webhook URL/,
+    );
+    assert.throws(
+      () =>
+        validateWebhookUrl(
+          "https://example.com/api/webhooks/223456789012345678/token",
+        ),
+      /Discord incoming webhook URL/,
+    );
+    assert.throws(
+      () => validateWebhookUrl("https://discord.com/api/webhooks/not-an-id/token"),
+      /Discord incoming webhook URL/,
+    );
+  });
+
+  it("loads both required Worker secrets", () => {
+    const friendJson = JSON.stringify([
+      { discordUserId: USER_ID, birthday: "February 29" },
+    ]);
+
     assert.deepEqual(
-      loadDeploymentConfig({
-        DISCORD_BOT_TOKEN: "token",
-        CLIENT_ID: USER_ID,
-        GUILD_ID: CHANNEL_ID,
+      loadWorkerConfig({
+        DISCORD_WEBHOOK_URL: ` ${WEBHOOK_URL} `,
+        FRIENDS_JSON: friendJson,
       }),
-      { token: "token", clientId: USER_ID, guildId: CHANNEL_ID },
+      {
+        webhookUrl: WEBHOOK_URL,
+        friends: [{ discordUserId: USER_ID, birthday: "February 29" }],
+      },
+    );
+    assert.throws(() => loadWorkerConfig({}), /DISCORD_WEBHOOK_URL secret/);
+    assert.throws(
+      () => loadWorkerConfig({ DISCORD_WEBHOOK_URL: WEBHOOK_URL }),
+      /FRIENDS_JSON secret/,
     );
   });
 });

@@ -1,132 +1,127 @@
 # RodeoBot
 
-RodeoBot is a small Discord bot that posts birthday announcements and advance reminders, plus an intentionally unhinged `/compliment` command.
+RodeoBot is a scheduled [Cloudflare Worker](https://developers.cloudflare.com/workers/) that posts birthday announcements and 14-day reminders to one Discord channel through an incoming webhook.
 
-It runs as one long-lived Node.js process. Discord.js maintains the Gateway connection while node-cron triggers the daily birthday check in the configured timezone.
+It has no persistent process, Discord Gateway connection, bot token, slash commands, database, or runtime dependencies. Cloudflare invokes it twice per UTC day; a Melbourne-time guard ensures exactly one invocation performs the 08:00 check across daylight-saving changes.
 
 ## Requirements
 
-- Node.js 24.17 or newer from the Node 24 LTS line
-- A Discord application and bot token
-- A Discord channel where the bot can view and send messages
-- The bot's `Guilds` Gateway intent (no privileged intents are required)
+- Node.js 24 from the version in [`.nvmrc`](./.nvmrc)
+- A Cloudflare account
+- Permission to create a webhook in the destination Discord channel
 
-## Setup
-
-Install the locked dependencies:
+Install the locked development dependency:
 
 ```bash
 npm ci
 ```
 
-Copy the example configuration and replace its placeholders:
+## Discord webhook
+
+Open the destination channel's settings, select **Integrations**, create a webhook, and copy its URL. The URL grants permission to post to that channel, so treat it like a password and revoke it in Discord if it is ever exposed.
+
+The old Discord application, bot token, channel ID, and slash-command registration are not used.
+
+## Configuration
+
+Copy the local secret template:
 
 ```bash
-cp .env.example .env
+cp .dev.vars.example .dev.vars
 ```
 
-The start and command-deployment scripts use Node's built-in `.env` file support. Environment variables supplied by the host take precedence over values in `.env`.
+Set both values in `.dev.vars`:
 
-### Configuration
+- `DISCORD_WEBHOOK_URL`: the incoming webhook URL copied from Discord
+- `FRIENDS_JSON`: a JSON array of `{ "discordUserId", "birthday" }` records
 
-Required when running the bot:
-
-- `DISCORD_BOT_TOKEN`: bot token from the Discord Developer Portal
-- `GENERAL_CHANNEL_ID`: numeric ID of the destination channel
-- `FRIENDS_JSON`: JSON array of `{ "discordUserId", "birthday" }` records
-
-Optional:
-
-- `BIRTHDAY_CRON_SCHEDULE`: defaults to `0 8 * * *`, or 08:00 daily
-
-Required only when deploying slash commands:
-
-- `CLIENT_ID`: Discord application ID
-- `GUILD_ID`: development or production guild ID
-
-Friend records use numeric Discord user IDs—not usernames or `@handles`—because Discord mentions are encoded using snowflake IDs. Enable Developer Mode in Discord, right-click a user or channel, and select **Copy ID**.
-
-```json
-[
-  {
-    "discordUserId": "123456789012345678",
-    "birthday": "January 15"
-  },
-  {
-    "discordUserId": "223456789012345678",
-    "birthday": "December 5"
-  }
-]
+```dotenv
+DISCORD_WEBHOOK_URL="https://discord.com/api/webhooks/223456789012345678/secret-token"
+FRIENDS_JSON='[{"discordUserId":"123456789012345678","birthday":"January 15"}]'
 ```
 
-Birthdays must use the full `Month Day` format. The legacy `discordUsername` field remains accepted when it contains a numeric user ID, but logs a migration warning.
+Friend IDs must be 17–20 digit Discord user IDs. Enable Discord Developer Mode, right-click a user, and select **Copy User ID**. Birthdays use the full `Month Day` format; February 29 is supported. The removed `discordUsername` compatibility field is no longer accepted.
 
-Configuration is validated before Discord login. Friend data is parsed again during each scheduled check, though changing a host environment variable or `.env` file still requires restarting the process.
+`.dev.vars` is ignored by Git. Do not put either secret in `wrangler.jsonc` or commit it elsewhere.
 
-## Running
+## Local development
 
-Register the guild slash commands after changing command definitions:
+Run the Worker locally:
 
 ```bash
-npm run deploy-commands
+npm run dev
 ```
 
-Start the long-lived bot process:
+Wrangler exposes a local scheduled-event endpoint. This example simulates 08:00 Melbourne on 13 August 2026, matching the template birthday:
 
 ```bash
-npm start
+curl "http://localhost:8787/cdn-cgi/local/scheduled?time=1786572000000&format=json"
 ```
 
-Command deployment is intentionally separate from startup, avoiding an unnecessary Discord API write on every restart.
+That request sends a real message to the webhook in `.dev.vars`. Use a disposable test webhook if the production channel should remain quiet. The other daily UTC trigger logs a skip and never loads secrets or calls Discord.
 
-For a one-minute local scheduler test, temporarily set:
-
-```env
-BIRTHDAY_CRON_SCHEDULE=*/1 * * * *
-```
-
-Set one configured birthday to today, start the bot, and wait for the scheduled-check log. Restore the production schedule afterwards.
-
-## Architecture
-
-- [`index.js`](./index.js): validates configuration, loads commands, connects the client, starts the scheduler, and handles graceful shutdown
-- [`src/botClient.js`](./src/botClient.js): owns the singleton Discord.js client and its ready promise
-- [`src/config.js`](./src/config.js): validates environment variables and normalizes friend records
-- [`src/scheduler.js`](./src/scheduler.js): creates the timezone-aware, non-overlapping cron task
-- [`src/reminders/sendBirthdayMessages.js`](./src/reminders/sendBirthdayMessages.js): fetches the destination channel and sends generated messages
-- [`src/birthdayService.js`](./src/birthdayService.js): contains timezone-aware birthday and reminder-date logic
-- [`src/loadCommands.js`](./src/loadCommands.js): discovers and validates slash-command modules
-
-The process handles `SIGINT` and `SIGTERM` by destroying the scheduled task and Discord client. Individual scheduled-run and message-send failures are logged without crashing later runs.
-
-## Development
-
-Run the Node.js test suite:
+Run the offline checks with:
 
 ```bash
 npm test
+npm run test:coverage
+npm run validate:config
+npm audit
+npm run deploy:dry-run
 ```
 
-Other useful commands:
+## Deployment
+
+Authenticate Wrangler once:
 
 ```bash
-npm run test:watch
-npm run test:coverage
-npm audit
+npm exec wrangler login
 ```
 
-Tests use the Node 24 built-in test runner, so the repository has no development-only test framework dependency tree. CI runs a clean install, the complete test suite, and a production dependency audit.
+For the initial deployment, stop the old long-running RodeoBot immediately before uploading the secrets so both implementations cannot announce the same birthday. Upload both required secrets together, then deploy the checked-in configuration:
 
-## Deployment notes
+```bash
+npm exec wrangler secret bulk .dev.vars
+npm run deploy
+```
 
-RodeoBot needs a host suitable for a long-running process, such as a VPS, container service, or persistent PaaS worker. Use the Node 24 LTS runtime and configure the host to restart the process after failures.
+The Worker has no public route. Its only production entry points are these UTC Cron Triggers:
 
-Current limitations:
+- `0 21 * * *` — 08:00 during Australian Eastern Daylight Time
+- `0 22 * * *` — 08:00 during Australian Eastern Standard Time
 
-- Messages are sent to one channel in one timezone.
-- Friend configuration is stored in one environment variable.
-- Sent announcements are not persisted, so restarting and manually retriggering a check can produce duplicates.
-- Downtime during the scheduled minute can cause a missed check.
+The same handler receives both. It returns without loading configuration unless the scheduled time is 08:00 in `Australia/Melbourne`. Cron changes can take several minutes to propagate.
+
+After the next scheduled execution, confirm delivery and inspect **Workers & Pages → RodeoBot → Logs** in Cloudflare. If deployment fails before cutover is verified, restart the old process. Once verified, remove its bot token and other obsolete host variables. Deleting the old Discord application is an optional manual cleanup.
+
+### Updating friends
+
+Edit the JSON in `.dev.vars`, validate both local secrets, then replace the production secret when prompted:
+
+```bash
+npm run validate:config
+npm exec wrangler secret put FRIENDS_JSON
+```
+
+Updating a Worker secret creates and deploys a new Worker version. No restart or persistent service is involved.
+
+## Delivery behavior
+
+- Birthday and reminder blocks due on the same day are combined into one Discord message.
+- Only configured user IDs may be mentioned; role and everyone mentions are disabled.
+- An empty day makes no Discord request.
+- Discord/network failures fail the invocation so Cloudflare can report or retry it. Successful and no-op runs disable retries.
+- There is intentionally no KV deduplication. One request minimizes partial delivery, but an accepted request whose response is lost can very rarely be delivered twice.
+- The combined message must remain within Discord's 2,000-character and 100-user mention limits; exceeding either fails visibly instead of silently dropping content.
+
+## Architecture
+
+- [`src/worker.js`](./src/worker.js): scheduled entry point, daylight-saving guard, orchestration, and safe logging
+- [`src/config.js`](./src/config.js): secret, webhook URL, Discord ID, and birthday validation
+- [`src/birthdayService.js`](./src/birthdayService.js): dependency-free Melbourne calendar and reminder logic
+- [`src/webhook.js`](./src/webhook.js): raw Discord payload construction and delivery
+
+CI runs the Node test suite with 85% coverage thresholds, audits the dependency tree, and validates the Worker bundle with a Wrangler deployment dry run.
 
 ## License
 

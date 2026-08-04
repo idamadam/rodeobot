@@ -2,23 +2,31 @@
   "name": "rodeobot",
   "version": "1.0.0",
   "private": true,
-  "description": "A Discord bot for birthday announcements, reminders, and lightweight slash commands.",
-  "main": "index.js",
+  "description": "A scheduled Cloudflare Worker for Discord birthday announcements and reminders.",
+  "type": "module",
+  "main": "src/worker.js",
   "scripts": {
-    "start": "node --env-file-if-exists=.env index.js",
+    "dev": "wrangler dev",
     "test": "node --test",
     "test:watch": "node --test --watch",
     "test:coverage": "node --test --experimental-test-coverage --test-coverage-lines=85 --test-coverage-branches=85 --test-coverage-functions=85",
-    "deploy-commands": "node --env-file-if-exists=.env src/deploy-commands.js"
+    "validate:config": "node --env-file-if-exists=.dev.vars scripts/validate-config.js",
+    "deploy": "wrangler deploy",
+    "deploy:dry-run": "wrangler deploy --dry-run"
   },
   "license": "ISC",
   "engines": {
     "node": ">=24.17.0 <25"
   },
   "packageManager": "npm@11.16.0",
-  "dependencies": {
-    "discord.js": "^14.27.0",
-    "node-cron": "^4.6.0",
-    "spacetime": "^7.13.0"
+  "devDependencies": {
+    "wrangler": "^4.118.0"
+  },
+  "overrides": {
+    "undici": "7.29.0"
+  },
+  "allowScripts": {
+    "esbuild@0.28.1": true,
+    "workerd@1.20260730.1": true
   }
 }

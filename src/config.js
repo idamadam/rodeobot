@@ -1,121 +1,99 @@
-"use strict";
-
-const spacetime = require("spacetime");
+import { parseBirthday } from "./birthdayService.js";
 
 const DISCORD_ID_PATTERN = /^\d{17,20}$/;
-const BIRTHDAY_PATTERN =
-  /^(January|February|March|April|May|June|July|August|September|October|November|December) ([1-9]|[12]\d|3[01])$/;
+const DISCORD_WEBHOOK_HOST_PATTERN = /^(?:(?:canary|ptb)\.)?discord\.com$/;
 
-let hasWarnedAboutLegacyUserField = false;
-
-function requiredEnv(name, env = process.env) {
-  const value = env[name]?.trim();
-
-  if (!value) {
-    throw new Error(`${name} environment variable is not set.`);
+function requiredSecret(name, env) {
+  const value = env?.[name];
+  if (typeof value !== "string" || !value.trim()) {
+    throw new Error(`${name} secret is not set.`);
   }
 
-  return value;
+  return value.trim();
 }
 
 function validateDiscordId(value, fieldName) {
   if (!DISCORD_ID_PATTERN.test(value)) {
-    throw new Error(
-      `${fieldName} must be a Discord user or channel ID containing 17 to 20 digits.`,
-    );
+    throw new Error(`${fieldName} must be a Discord user ID containing 17 to 20 digits.`);
   }
 
   return value;
 }
 
-function validateBirthday(value, index, timezone) {
-  if (typeof value !== "string" || !BIRTHDAY_PATTERN.test(value)) {
-    throw new Error(
-      `FRIENDS_JSON[${index}].birthday must use the full \"Month Day\" format, for example \"August 13\".`,
-    );
-  }
-
-  // Use a leap year so February 29 remains a valid recurring birthday.
-  if (!spacetime(`${value} 2000`, timezone).isValid()) {
-    throw new Error(`FRIENDS_JSON[${index}].birthday is not a valid date.`);
-  }
-
-  return value;
-}
-
-function normalizeFriend(person, index, timezone) {
-  if (!person || typeof person !== "object" || Array.isArray(person)) {
-    throw new Error(`FRIENDS_JSON[${index}] must be an object.`);
-  }
-
-  const usesLegacyField = !person.discordUserId && person.discordUsername;
-  const discordUserId = person.discordUserId || person.discordUsername;
-
-  if (typeof discordUserId !== "string") {
-    throw new Error(`FRIENDS_JSON[${index}].discordUserId is required.`);
-  }
-
-  if (usesLegacyField && !hasWarnedAboutLegacyUserField) {
-    console.warn(
-      "FRIENDS_JSON uses the deprecated discordUsername field; rename it to discordUserId.",
-    );
-    hasWarnedAboutLegacyUserField = true;
-  }
-
-  return {
-    discordUserId: validateDiscordId(
-      discordUserId.trim(),
-      `FRIENDS_JSON[${index}].discordUserId`,
-    ),
-    birthday: validateBirthday(person.birthday, index, timezone),
-  };
-}
-
-function parseFriends(value, timezone = "Australia/Melbourne") {
+export function parseFriends(value) {
   let parsed;
 
   try {
     parsed = JSON.parse(value);
-  } catch (error) {
-    throw new Error(`Failed to parse FRIENDS_JSON: ${error.message}`);
+  } catch {
+    throw new Error("FRIENDS_JSON must contain valid JSON.");
   }
 
   if (!Array.isArray(parsed)) {
     throw new Error("FRIENDS_JSON must contain a JSON array.");
   }
 
-  return parsed.map((person, index) => normalizeFriend(person, index, timezone));
+  return parsed.map((friend, index) => {
+    if (!friend || typeof friend !== "object" || Array.isArray(friend)) {
+      throw new Error(`FRIENDS_JSON[${index}] must be an object.`);
+    }
+
+    if (typeof friend.discordUserId !== "string") {
+      throw new Error(`FRIENDS_JSON[${index}].discordUserId is required.`);
+    }
+
+    const discordUserId = validateDiscordId(
+      friend.discordUserId.trim(),
+      `FRIENDS_JSON[${index}].discordUserId`,
+    );
+    const birthday =
+      typeof friend.birthday === "string" ? friend.birthday.trim() : friend.birthday;
+
+    try {
+      parseBirthday(birthday);
+    } catch (error) {
+      throw new Error(`FRIENDS_JSON[${index}].birthday ${error.message}`);
+    }
+
+    return { discordUserId, birthday };
+  });
 }
 
-function loadFriends(env = process.env, timezone = "Australia/Melbourne") {
-  return parseFriends(requiredEnv("FRIENDS_JSON", env), timezone);
+export function validateWebhookUrl(value) {
+  let url;
+
+  try {
+    url = new URL(value);
+  } catch {
+    throw new Error("DISCORD_WEBHOOK_URL must be a valid URL.");
+  }
+
+  const segments = url.pathname.split("/").filter(Boolean);
+  const versionOffset = /^v\d+$/.test(segments[1] ?? "") ? 1 : 0;
+  const webhookId = segments[2 + versionOffset];
+  const webhookToken = segments[3 + versionOffset];
+  const hasValidPath =
+    segments[0] === "api" &&
+    segments[1 + versionOffset] === "webhooks" &&
+    segments.length === 4 + versionOffset &&
+    DISCORD_ID_PATTERN.test(webhookId ?? "") &&
+    Boolean(webhookToken);
+
+  if (
+    url.protocol !== "https:" ||
+    !DISCORD_WEBHOOK_HOST_PATTERN.test(url.hostname) ||
+    !hasValidPath
+  ) {
+    throw new Error("DISCORD_WEBHOOK_URL must be a Discord incoming webhook URL.");
+  }
+
+  url.hash = "";
+  return url.toString();
 }
 
-function loadBotConfig(env = process.env, timezone = "Australia/Melbourne") {
-  const token = requiredEnv("DISCORD_BOT_TOKEN", env);
-  const channelId = validateDiscordId(
-    requiredEnv("GENERAL_CHANNEL_ID", env),
-    "GENERAL_CHANNEL_ID",
-  );
-
-  // Validate friend configuration before connecting to Discord. The reminder
-  // workflow reloads it for every scheduled run.
-  loadFriends(env, timezone);
-
-  return { token, channelId };
-}
-
-function loadDeploymentConfig(env = process.env) {
+export function loadWorkerConfig(env) {
   return {
-    token: requiredEnv("DISCORD_BOT_TOKEN", env),
-    clientId: validateDiscordId(requiredEnv("CLIENT_ID", env), "CLIENT_ID"),
-    guildId: validateDiscordId(requiredEnv("GUILD_ID", env), "GUILD_ID"),
+    webhookUrl: validateWebhookUrl(requiredSecret("DISCORD_WEBHOOK_URL", env)),
+    friends: parseFriends(requiredSecret("FRIENDS_JSON", env)),
   };
 }
-
-module.exports = {
-  loadBotConfig,
-  loadDeploymentConfig,
-  loadFriends,
-  parseFriends,
-};
