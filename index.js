@@ -1,95 +1,108 @@
 "use strict";
 
-require("dotenv").config();
-const { initClient, getReadyClient } = require('./src/botClient');
+const { Events, MessageFlags } = require("discord.js");
+const { destroyClient, initClient } = require("./src/botClient");
 const BirthdayService = require("./src/birthdayService");
-const { startBirthdayScheduler } = require('./src/scheduler');
-const fs = require('fs');
-const path = require('path');
+const { loadBotConfig } = require("./src/config");
+const loadCommands = require("./src/loadCommands");
+const { startBirthdayScheduler } = require("./src/scheduler");
 
-async function run() {
-  try {
-    // Initialize the Discord client (starts login process)
-    initClient();
+async function replyWithCommandError(interaction) {
+  const response = {
+    content: "There was an error executing this command!",
+    flags: MessageFlags.Ephemeral,
+  };
 
-    // Get the ready client
-    const client = await getReadyClient();
-
-    // Auto-deploy slash commands on startup (if CLIENT_ID and GUILD_ID are set)
-    if (process.env.CLIENT_ID && process.env.GUILD_ID) {
-      try {
-        const { deployCommands } = require('./src/deploy-commands');
-        await deployCommands();
-        console.log('Slash commands deployed successfully');
-      } catch (error) {
-        console.warn('Failed to deploy commands (continuing anyway):', error.message);
-        // Don't exit - bot can still run without slash commands
-      }
-    } else {
-      console.log('Skipping command deployment (CLIENT_ID or GUILD_ID not set)');
-    }
-
-    // Load slash commands
-    const commands = new Map();
-    const commandsPath = path.join(__dirname, 'src', 'commands');
-
-    if (fs.existsSync(commandsPath)) {
-      const commandFiles = fs.readdirSync(commandsPath).filter(file => file.endsWith('.js'));
-
-      for (const file of commandFiles) {
-        const filePath = path.join(commandsPath, file);
-        const command = require(filePath);
-
-        if ('data' in command && 'execute' in command) {
-          commands.set(command.data.name, command);
-          console.log(`Loaded command: ${command.data.name}`);
-        }
-      }
-    }
-
-    // Handle slash command interactions
-    client.on('interactionCreate', async (interaction) => {
-      if (!interaction.isChatInputCommand()) return;
-
-      const command = commands.get(interaction.commandName);
-
-      if (!command) {
-        console.error(`No command matching ${interaction.commandName} was found.`);
-        return;
-      }
-
-      try {
-        await command.execute(interaction);
-      } catch (error) {
-        console.error(`Error executing ${interaction.commandName}:`, error);
-
-        const errorMessage = 'There was an error executing this command!';
-        if (!interaction.replied && !interaction.deferred) {
-          await interaction.reply({ content: errorMessage, ephemeral: true });
-        } else if (interaction.deferred) {
-          await interaction.editReply(errorMessage);
-        }
-      }
-    });
-
-    // Create birthday service instance
-    const birthdayService = new BirthdayService();
-
-    // Get channel ID from environment
-    const channelId = process.env.GENERAL_CHANNEL_ID;
-
-    // Start the scheduler (keeps process alive)
-    await startBirthdayScheduler({
-      client,
-      birthdayService,
-      channelId
-    });
-
-    console.log('RodeoBot is running. Press Ctrl+C to exit.');
-  } catch (error) {
-    console.error('Error:', error);
-    process.exit(1);
+  if (interaction.deferred) {
+    await interaction.editReply({ content: response.content });
+  } else if (interaction.replied) {
+    await interaction.followUp(response);
+  } else {
+    await interaction.reply(response);
   }
 }
 
-run();
+async function run({
+  createBirthdayService = () => new BirthdayService(),
+  loadConfig = loadBotConfig,
+  commandLoader = loadCommands,
+  connectClient = initClient,
+  startScheduler = startBirthdayScheduler,
+  disconnectClient = destroyClient,
+  processRef = process,
+  logger = console,
+} = {}) {
+  const birthdayService = createBirthdayService();
+  const { token, channelId } = loadConfig(
+    processRef.env,
+    birthdayService.timezone,
+  );
+  const commands = commandLoader();
+  const client = await connectClient({ token });
+
+  client.on(Events.InteractionCreate, async (interaction) => {
+    if (!interaction.isChatInputCommand()) return;
+
+    const command = commands.get(interaction.commandName);
+
+    if (!command) {
+      logger.error(`No command matching ${interaction.commandName} was found.`);
+      return;
+    }
+
+    try {
+      await command.execute(interaction);
+    } catch (error) {
+      logger.error(`Error executing ${interaction.commandName}:`, error);
+
+      try {
+        await replyWithCommandError(interaction);
+      } catch (replyError) {
+        logger.error("Failed to send the command error response:", replyError);
+      }
+    }
+  });
+
+  const scheduler = await startScheduler({
+    client,
+    birthdayService,
+    channelId,
+  });
+
+  let isShuttingDown = false;
+  const shutdown = async (signal) => {
+    if (isShuttingDown) return;
+    isShuttingDown = true;
+
+    logger.log(`Received ${signal}; shutting down RodeoBot...`);
+    try {
+      await scheduler.destroy();
+    } finally {
+      disconnectClient();
+    }
+  };
+
+  const handleSignal = (signal) => {
+    shutdown(signal).catch((error) => {
+      logger.error("Failed to shut down cleanly:", error);
+      processRef.exitCode = 1;
+    });
+  };
+
+  processRef.once("SIGINT", () => handleSignal("SIGINT"));
+  processRef.once("SIGTERM", () => handleSignal("SIGTERM"));
+
+  logger.log("RodeoBot is running. Press Ctrl+C to exit.");
+
+  return { client, scheduler, shutdown };
+}
+
+if (require.main === module) {
+  run().catch((error) => {
+    console.error("Failed to start RodeoBot:", error);
+    destroyClient();
+    process.exitCode = 1;
+  });
+}
+
+module.exports = { replyWithCommandError, run };

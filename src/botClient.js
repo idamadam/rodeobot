@@ -1,6 +1,6 @@
 "use strict";
 
-const { Client, GatewayIntentBits } = require('discord.js');
+const { Client, Events, GatewayIntentBits } = require("discord.js");
 
 // Singleton cache
 let clientInstance = null;
@@ -10,9 +10,9 @@ let readyPromise = null;
  * Validates required environment variables for the Discord bot.
  * @throws {Error} if DISCORD_BOT_TOKEN is not set
  */
-function validateEnvVars() {
-  if (!process.env.DISCORD_BOT_TOKEN) {
-    throw new Error('DISCORD_BOT_TOKEN environment variable is not set.');
+function validateToken(token) {
+  if (!token) {
+    throw new Error("DISCORD_BOT_TOKEN environment variable is not set.");
   }
 }
 
@@ -23,63 +23,63 @@ function validateEnvVars() {
  *
  * @returns {Promise<Client>} Promise that resolves with the ready Discord client
  */
-function initClient() {
+function initClient({
+  token = process.env.DISCORD_BOT_TOKEN,
+  ClientClass = Client,
+} = {}) {
   // Return cached promise if already initialized
   if (readyPromise) {
     return readyPromise;
   }
 
   // Validate environment variables
-  validateEnvVars();
+  validateToken(token);
 
   // Create new client instance
-  clientInstance = new Client({
-    intents: [
-      GatewayIntentBits.Guilds,
-      GatewayIntentBits.GuildMessages,
-      GatewayIntentBits.MessageContent
-    ]
+  clientInstance = new ClientClass({
+    intents: [GatewayIntentBits.Guilds],
   });
 
   // Set up event listeners
-  clientInstance.on('ready', () => {
+  clientInstance.on(Events.ClientReady, () => {
     console.log(`Bot is ready! Logged in as ${clientInstance.user.tag}`);
   });
 
-  clientInstance.on('error', (error) => {
-    console.error('Discord client error:', error);
+  clientInstance.on(Events.Error, (error) => {
+    console.error("Discord client error:", error);
   });
 
   // Create and cache the ready promise
   readyPromise = new Promise((resolve, reject) => {
-    // Resolve when client is ready
-    clientInstance.once('ready', () => {
+    const handleReady = () => {
+      clientInstance.removeListener(Events.Error, handleStartupError);
       resolve(clientInstance);
-    });
+    };
 
-    // Reject on login error
-    clientInstance.on('error', (error) => {
+    const handleStartupError = (error) => {
+      clientInstance.removeListener(Events.ClientReady, handleReady);
       reject(error);
-    });
+    };
 
-    // Attempt login
-    clientInstance.login(process.env.DISCORD_BOT_TOKEN).catch(reject);
+    clientInstance.once(Events.ClientReady, handleReady);
+    clientInstance.once(Events.Error, handleStartupError);
+
+    clientInstance.login(token).catch(handleStartupError);
   });
 
   return readyPromise;
 }
 
-/**
- * Gets the ready Discord client instance.
- * Initializes the client if not already initialized.
- *
- * @returns {Promise<Client>} Promise that resolves with the ready Discord client
- */
-async function getReadyClient() {
-  return await initClient();
+function destroyClient() {
+  if (clientInstance) {
+    clientInstance.destroy();
+  }
+
+  clientInstance = null;
+  readyPromise = null;
 }
 
 module.exports = {
+  destroyClient,
   initClient,
-  getReadyClient
 };

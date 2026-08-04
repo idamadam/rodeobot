@@ -1,6 +1,6 @@
 "use strict";
 
-const { SlashCommandBuilder } = require('discord.js');
+const { SlashCommandBuilder } = require("discord.js");
 
 // Absolutely unhinged compliments
 const UNHINGED_COMPLIMENTS = [
@@ -39,37 +39,21 @@ function getRandomCompliment() {
  * @param {import('discord.js').CommandInteraction} interaction - The interaction object
  */
 async function handleCompliment(interaction) {
-  try {
-    // Get the user who triggered the command
-    const user = interaction.user;
+  const user = interaction.user;
+  const compliment = getRandomCompliment();
 
-    // Get a random unhinged compliment
-    const compliment = getRandomCompliment();
-
-    // Send the compliment with eye contact (mention)
-    await interaction.reply({
-      content: `<@${user.id}> ${compliment} 👁️👄👁️`,
-      allowedMentions: { users: [user.id] }
-    });
-  } catch (error) {
-    console.error('Error in compliment command:', error);
-
-    // Try to reply with an error message if we haven't replied yet
-    const errorMessage = 'Something went wrong while giving you an unhinged compliment!';
-    if (!interaction.replied && !interaction.deferred) {
-      await interaction.reply({ content: errorMessage, ephemeral: true });
-    } else if (interaction.deferred) {
-      await interaction.editReply(errorMessage);
-    }
-  }
+  await interaction.reply({
+    content: `<@${user.id}> ${compliment} 👁️👄👁️`,
+    allowedMentions: { users: [user.id] },
+  });
 }
 
 // Define the slash command
 const complimentCommand = new SlashCommandBuilder()
-  .setName('compliment')
-  .setDescription('Receive an absolutely unhinged compliment');
+  .setName("compliment")
+  .setDescription("Receive an absolutely unhinged compliment");
 
 module.exports = {
   data: complimentCommand,
-  execute: handleCompliment
+  execute: handleCompliment,
 };

@@ -1,24 +1,24 @@
 {
   "name": "rodeobot",
   "version": "1.0.0",
+  "private": true,
+  "description": "A Discord bot for birthday announcements, reminders, and lightweight slash commands.",
   "main": "index.js",
   "scripts": {
-    "start": "node index.js",
-    "test": "jest",
-    "test:watch": "jest --watch",
-    "deploy-commands": "node src/deploy-commands.js"
+    "start": "node --env-file-if-exists=.env index.js",
+    "test": "node --test",
+    "test:watch": "node --test --watch",
+    "test:coverage": "node --test --experimental-test-coverage --test-coverage-lines=85 --test-coverage-branches=85 --test-coverage-functions=85",
+    "deploy-commands": "node --env-file-if-exists=.env src/deploy-commands.js"
   },
-  "author": "",
   "license": "ISC",
-  "description": "",
-  "dependencies": {
-    "discord.js": "^14.19.3",
-    "dotenv": "^16.5.0",
-    "node-cron": "^4.2.1",
-    "spacetime": "^7.10.0"
+  "engines": {
+    "node": ">=24.17.0 <25"
   },
-  "devDependencies": {
-    "@types/jest": "^29.5.14",
-    "jest": "^29.7.0"
+  "packageManager": "npm@11.16.0",
+  "dependencies": {
+    "discord.js": "^14.27.0",
+    "node-cron": "^4.6.0",
+    "spacetime": "^7.13.0"
   }
 }

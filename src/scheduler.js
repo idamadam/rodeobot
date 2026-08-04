@@ -1,6 +1,7 @@
 "use strict";
 
 const cron = require("node-cron");
+const { Events } = require("discord.js");
 const sendBirthdayMessages = require("./reminders/sendBirthdayMessages");
 
 /**
@@ -10,66 +11,62 @@ const sendBirthdayMessages = require("./reminders/sendBirthdayMessages");
  * @param {BirthdayService} params.birthdayService - Birthday service instance
  * @param {string} params.channelId - Discord channel ID to send messages to
  * @param {string} [params.schedule] - Cron schedule string (defaults to env var or '0 8 * * *')
+ * @param {Object} [params.cronScheduler] - Injectable cron implementation for tests
+ * @param {Function} [params.sendMessages] - Injectable reminder workflow for tests
  * @returns {import('node-cron').ScheduledTask} The created cron task
  */
 async function startBirthdayScheduler({
-    client,
-    birthdayService,
-    channelId,
-    schedule,
+  client,
+  birthdayService,
+  channelId,
+  schedule,
+  cronScheduler = cron,
+  sendMessages = sendBirthdayMessages,
 }) {
-    // Get schedule from parameter, env var, or default
-    const cronSchedule =
-        schedule || process.env.BIRTHDAY_CRON_SCHEDULE || "0 9 * * *";
+  const cronSchedule =
+    schedule || process.env.BIRTHDAY_CRON_SCHEDULE || "0 8 * * *";
 
-    // Get timezone from birthday service
-    const timezone = birthdayService.timezone;
+  if (!cronScheduler.validate(cronSchedule)) {
+    throw new Error(`Invalid birthday cron schedule: ${cronSchedule}`);
+  }
 
-    console.log(
-        `Starting birthday scheduler with schedule: "${cronSchedule}" (timezone: ${timezone})`,
-    );
-    console.log(`Channel ID: ${channelId}`);
+  const timezone = birthdayService.timezone;
 
-    // Await client ready state
-    // Note: client should already be ready when passed in, but we ensure it here
-    if (!client.isReady()) {
-        console.log("Waiting for Discord client to be ready...");
-        await new Promise((resolve) => client.once("ready", resolve));
-    }
+  console.log(
+    `Starting birthday scheduler with schedule: "${cronSchedule}" (timezone: ${timezone})`,
+  );
+  console.log(`Channel ID: ${channelId}`);
 
-    console.log("Discord client is ready, scheduling birthday reminders");
+  if (!client.isReady()) {
+    console.log("Waiting for Discord client to be ready...");
+    await new Promise((resolve) => client.once(Events.ClientReady, resolve));
+  }
 
-    // Schedule the cron job
-    const task = cron.schedule(
-        cronSchedule,
-        async () => {
-            console.log("Running scheduled birthday reminder check...");
-            try {
-                await sendBirthdayMessages({
-                    client,
-                    birthdayService,
-                    channelId,
-                });
-            } catch (error) {
-                console.error(
-                    "Error in scheduled birthday reminder:",
-                    error.message,
-                );
-                console.error("Stack trace:", error.stack);
-                // Don't crash the process - just log and continue
-            }
-        },
-        {
-            scheduled: true,
-            timezone: timezone,
-        },
-    );
+  console.log("Discord client is ready, scheduling birthday reminders");
 
-    console.log("Birthday scheduler started successfully");
+  const task = cronScheduler.schedule(
+    cronSchedule,
+    async () => {
+      console.log("Running scheduled birthday reminder check...");
+      try {
+        await sendMessages({ client, birthdayService, channelId });
+      } catch (error) {
+        console.error("Error in scheduled birthday reminder:", error.message);
+        console.error("Stack trace:", error.stack);
+      }
+    },
+    {
+      name: "birthday-reminders",
+      noOverlap: true,
+      timezone,
+    },
+  );
 
-    return task;
+  console.log("Birthday scheduler started successfully");
+
+  return task;
 }
 
 module.exports = {
-    startBirthdayScheduler,
+  startBirthdayScheduler,
 };

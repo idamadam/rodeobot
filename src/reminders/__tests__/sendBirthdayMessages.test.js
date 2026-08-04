@@ -1,209 +1,205 @@
-const sendBirthdayMessages = require('../sendBirthdayMessages');
+"use strict";
 
-describe('sendBirthdayMessages', () => {
-  let mockClient;
-  let mockChannel;
-  let mockBirthdayService;
-  let originalEnv;
+const assert = require("node:assert/strict");
+const { afterEach, beforeEach, describe, it, mock } = require("node:test");
+const sendBirthdayMessages = require("../sendBirthdayMessages");
+
+const USER_1 = "123456789012345678";
+const USER_2 = "223456789012345678";
+
+describe("sendBirthdayMessages", () => {
+  let birthdayCalls;
+  let birthdayMessages;
+  let channel;
+  let client;
+  let errorCalls;
+  let originalFriendsJson;
+  let sentMessages;
 
   beforeEach(() => {
-    // Save original env
-    originalEnv = process.env.FRIENDS_JSON;
-
-    // Mock channel
-    mockChannel = {
-      send: jest.fn().mockResolvedValue({}),
-      isTextBased: jest.fn().mockReturnValue(true),
-      type: 0 // Text channel
-    };
-
-    // Mock client
-    mockClient = {
-      channels: {
-        fetch: jest.fn().mockResolvedValue(mockChannel)
-      }
-    };
-
-    // Mock birthday service
-    mockBirthdayService = {
-      getBirthdayMessages: jest.fn().mockReturnValue([])
-    };
-
-    // Set up default env
+    originalFriendsJson = process.env.FRIENDS_JSON;
     process.env.FRIENDS_JSON = JSON.stringify([
-      { discordUsername: 'user1', birthday: 'April 15' }
+      { discordUserId: USER_1, birthday: "April 15" },
     ]);
 
-    // Suppress console logs during tests
-    jest.spyOn(console, 'log').mockImplementation(() => {});
-    jest.spyOn(console, 'error').mockImplementation(() => {});
+    birthdayCalls = [];
+    birthdayMessages = [];
+    sentMessages = [];
+    errorCalls = [];
+
+    channel = {
+      isSendable: () => true,
+      async send(message) {
+        sentMessages.push(message);
+      },
+    };
+    client = {
+      channels: {
+        async fetch() {
+          return channel;
+        },
+      },
+    };
+
+    mock.method(console, "log", () => {});
+    mock.method(console, "error", (...args) => errorCalls.push(args));
   });
 
   afterEach(() => {
-    // Restore original env
-    if (originalEnv !== undefined) {
-      process.env.FRIENDS_JSON = originalEnv;
-    } else {
+    if (originalFriendsJson === undefined) {
       delete process.env.FRIENDS_JSON;
+    } else {
+      process.env.FRIENDS_JSON = originalFriendsJson;
     }
-
-    jest.restoreAllMocks();
+    mock.restoreAll();
   });
 
-  test('should load friends and send messages when birthdays exist', async () => {
-    mockBirthdayService.getBirthdayMessages.mockReturnValue([
-      'Happy birthday!',
-      'https://giphy.com/example.gif'
-    ]);
+  function birthdayService() {
+    return {
+      timezone: "Australia/Melbourne",
+      getBirthdayMessages(friends) {
+        birthdayCalls.push(friends);
+        return birthdayMessages;
+      },
+    };
+  }
+
+  it("loads friends and sends every birthday message", async () => {
+    birthdayMessages = ["Happy birthday!", "https://giphy.com/example.gif"];
 
     await sendBirthdayMessages({
-      client: mockClient,
-      birthdayService: mockBirthdayService,
-      channelId: 'channel123'
+      client,
+      birthdayService: birthdayService(),
+      channelId: "channel123",
     });
 
-    expect(mockBirthdayService.getBirthdayMessages).toHaveBeenCalledWith([
-      { discordUsername: 'user1', birthday: 'April 15' }
+    assert.deepEqual(birthdayCalls, [
+      [{ discordUserId: USER_1, birthday: "April 15" }],
     ]);
-    expect(mockClient.channels.fetch).toHaveBeenCalledWith('channel123');
-    expect(mockChannel.send).toHaveBeenCalledTimes(2);
-    expect(mockChannel.send).toHaveBeenNthCalledWith(1, 'Happy birthday!');
-    expect(mockChannel.send).toHaveBeenNthCalledWith(2, 'https://giphy.com/example.gif');
+    assert.deepEqual(sentMessages, birthdayMessages);
   });
 
-  test('should not send messages when no birthdays exist', async () => {
-    mockBirthdayService.getBirthdayMessages.mockReturnValue([]);
+  it("does not fetch a channel when there are no messages", async () => {
+    let fetchCount = 0;
+    client.channels.fetch = async () => {
+      fetchCount += 1;
+      return channel;
+    };
 
     await sendBirthdayMessages({
-      client: mockClient,
-      birthdayService: mockBirthdayService,
-      channelId: 'channel123'
+      client,
+      birthdayService: birthdayService(),
+      channelId: "channel123",
     });
 
-    expect(mockBirthdayService.getBirthdayMessages).toHaveBeenCalled();
-    expect(mockClient.channels.fetch).not.toHaveBeenCalled();
-    expect(mockChannel.send).not.toHaveBeenCalled();
-    expect(console.log).toHaveBeenCalledWith('No birthday messages to send today.');
+    assert.equal(fetchCount, 0);
+    assert.deepEqual(sentMessages, []);
   });
 
-  test('should handle missing FRIENDS_JSON gracefully', async () => {
+  it("handles missing friend configuration", async () => {
     delete process.env.FRIENDS_JSON;
 
     await sendBirthdayMessages({
-      client: mockClient,
-      birthdayService: mockBirthdayService,
-      channelId: 'channel123'
+      client,
+      birthdayService: birthdayService(),
+      channelId: "channel123",
     });
 
-    expect(console.error).toHaveBeenCalledWith(
-      'Failed to load friend data:',
-      'FRIENDS_JSON environment variable is not set.'
-    );
-    expect(mockBirthdayService.getBirthdayMessages).not.toHaveBeenCalled();
-    expect(mockChannel.send).not.toHaveBeenCalled();
+    assert.equal(errorCalls[0][0], "Failed to load friend data:");
+    assert.match(errorCalls[0][1], /FRIENDS_JSON environment variable is not set/);
+    assert.deepEqual(birthdayCalls, []);
   });
 
-  test('should handle invalid FRIENDS_JSON gracefully', async () => {
-    process.env.FRIENDS_JSON = 'invalid json {';
+  it("handles invalid friend JSON", async () => {
+    process.env.FRIENDS_JSON = "invalid json {";
 
     await sendBirthdayMessages({
-      client: mockClient,
-      birthdayService: mockBirthdayService,
-      channelId: 'channel123'
+      client,
+      birthdayService: birthdayService(),
+      channelId: "channel123",
     });
 
-    expect(console.error).toHaveBeenCalledWith(
-      'Failed to load friend data:',
-      expect.stringContaining('Failed to parse FRIENDS_JSON')
-    );
-    expect(mockBirthdayService.getBirthdayMessages).not.toHaveBeenCalled();
-    expect(mockChannel.send).not.toHaveBeenCalled();
+    assert.match(errorCalls[0][1], /Failed to parse FRIENDS_JSON/);
+    assert.deepEqual(birthdayCalls, []);
   });
 
-  test('should handle channel fetch failure gracefully', async () => {
-    mockClient.channels.fetch.mockRejectedValue(new Error('Unknown Channel'));
-    mockBirthdayService.getBirthdayMessages.mockReturnValue(['Happy birthday!']);
+  it("handles channel fetch failures", async () => {
+    birthdayMessages = ["Happy birthday!"];
+    client.channels.fetch = async () => {
+      throw new Error("Unknown Channel");
+    };
 
     await sendBirthdayMessages({
-      client: mockClient,
-      birthdayService: mockBirthdayService,
-      channelId: 'channel123'
+      client,
+      birthdayService: birthdayService(),
+      channelId: "channel123",
     });
 
-    expect(console.error).toHaveBeenCalledWith('Failed to fetch channel:', 'Unknown Channel');
-    expect(mockChannel.send).not.toHaveBeenCalled();
+    assert.deepEqual(errorCalls[0], ["Failed to fetch channel:", "Unknown Channel"]);
+    assert.deepEqual(sentMessages, []);
   });
 
-  test('should handle null channel gracefully', async () => {
-    mockClient.channels.fetch.mockResolvedValue(null);
-    mockBirthdayService.getBirthdayMessages.mockReturnValue(['Happy birthday!']);
+  it("handles missing channels", async () => {
+    birthdayMessages = ["Happy birthday!"];
+    client.channels.fetch = async () => null;
 
     await sendBirthdayMessages({
-      client: mockClient,
-      birthdayService: mockBirthdayService,
-      channelId: 'channel123'
+      client,
+      birthdayService: birthdayService(),
+      channelId: "channel123",
     });
 
-    expect(console.error).toHaveBeenCalledWith('Channel channel123 not found');
-    expect(mockChannel.send).not.toHaveBeenCalled();
+    assert.deepEqual(errorCalls[0], ["Channel channel123 not found"]);
   });
 
-  test('should handle non-text channel gracefully', async () => {
-    mockChannel.isTextBased.mockReturnValue(false);
-    mockChannel.type = 2; // Voice channel
-    mockBirthdayService.getBirthdayMessages.mockReturnValue(['Happy birthday!']);
+  it("rejects channels that cannot send messages", async () => {
+    birthdayMessages = ["Happy birthday!"];
+    channel.isSendable = () => false;
 
     await sendBirthdayMessages({
-      client: mockClient,
-      birthdayService: mockBirthdayService,
-      channelId: 'channel123'
+      client,
+      birthdayService: birthdayService(),
+      channelId: "channel123",
     });
 
-    expect(console.error).toHaveBeenCalledWith('Channel channel123 is not text-based (type: 2)');
-    expect(mockChannel.send).not.toHaveBeenCalled();
-  });
-
-  test('should handle message send failure gracefully', async () => {
-    mockBirthdayService.getBirthdayMessages.mockReturnValue(['Happy birthday!']);
-    mockChannel.send.mockRejectedValue(new Error('Missing Permissions'));
-
-    await sendBirthdayMessages({
-      client: mockClient,
-      birthdayService: mockBirthdayService,
-      channelId: 'channel123'
-    });
-
-    expect(console.error).toHaveBeenCalledWith('Error sending messages:', 'Missing Permissions');
-  });
-
-  test('should reload friend data on each invocation', async () => {
-    mockBirthdayService.getBirthdayMessages.mockReturnValue([]);
-
-    // First call
-    await sendBirthdayMessages({
-      client: mockClient,
-      birthdayService: mockBirthdayService,
-      channelId: 'channel123'
-    });
-
-    expect(mockBirthdayService.getBirthdayMessages).toHaveBeenCalledWith([
-      { discordUsername: 'user1', birthday: 'April 15' }
+    assert.deepEqual(errorCalls[0], [
+      "Channel channel123 does not support sending messages.",
     ]);
+    assert.deepEqual(sentMessages, []);
+  });
 
-    // Update env
+  it("continues after an individual message fails", async () => {
+    birthdayMessages = ["first", "second"];
+    channel.send = async (message) => {
+      if (message === "first") throw new Error("Missing Permissions");
+      sentMessages.push(message);
+    };
+
+    await sendBirthdayMessages({
+      client,
+      birthdayService: birthdayService(),
+      channelId: "channel123",
+    });
+
+    assert.deepEqual(sentMessages, ["second"]);
+    assert.deepEqual(errorCalls[0], [
+      "Failed to send birthday message 1/2:",
+      "Missing Permissions",
+    ]);
+  });
+
+  it("reloads and normalizes friend data on each invocation", async () => {
+    const service = birthdayService();
+
+    await sendBirthdayMessages({ client, birthdayService: service, channelId: "channel123" });
     process.env.FRIENDS_JSON = JSON.stringify([
-      { discordUsername: 'user2', birthday: 'May 20' }
+      { discordUserId: USER_2, birthday: "May 20" },
     ]);
+    await sendBirthdayMessages({ client, birthdayService: service, channelId: "channel123" });
 
-    // Second call
-    await sendBirthdayMessages({
-      client: mockClient,
-      birthdayService: mockBirthdayService,
-      channelId: 'channel123'
-    });
-
-    expect(mockBirthdayService.getBirthdayMessages).toHaveBeenCalledWith([
-      { discordUsername: 'user2', birthday: 'May 20' }
+    assert.deepEqual(birthdayCalls, [
+      [{ discordUserId: USER_1, birthday: "April 15" }],
+      [{ discordUserId: USER_2, birthday: "May 20" }],
     ]);
   });
 });
