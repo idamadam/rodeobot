@@ -78,11 +78,13 @@ Authenticate Wrangler once:
 npm exec wrangler login
 ```
 
-For the initial deployment, stop the old long-running RodeoBot immediately before uploading the secrets so both implementations cannot announce the same birthday. Upload both required secrets together, then deploy the checked-in configuration:
+For the initial deployment, populate `friends.csv` as described below and set
+`DISCORD_WEBHOOK_URL` in `.dev.vars`. Stop the old long-running RodeoBot before
+activating this schedule so both implementations cannot announce the same birthday.
+Deploy the code and both secrets together:
 
 ```bash
-npm exec wrangler secret bulk .dev.vars
-npm run deploy
+npm run deploy:configured
 ```
 
 The Worker has no public route. Its only production entry points are these UTC Cron Triggers:
@@ -94,16 +96,56 @@ The same handler receives both. It returns without loading configuration unless 
 
 After the next scheduled execution, confirm delivery and inspect **Workers & Pages → RodeoBot → Logs** in Cloudflare. If deployment fails before cutover is verified, restart the old process. Once verified, remove its bot token and other obsolete host variables. Deleting the old Discord application is an optional manual cleanup.
 
-### Updating friends
+### Updating friends using a local CSV
 
-Edit the JSON in `.dev.vars`, validate both local secrets, then replace the production secret when prompted:
+Maintain birthdays in `friends.csv` in this project directory. It is ignored by
+Git and stays on your machine. For a new checkout, copy `friends.example.csv` to
+`friends.csv`, then replace the example rows with real people:
 
-```bash
-npm run validate:config
-npm exec wrangler secret put FRIENDS_JSON
+```csv
+name,discordUserId,birthday
+Alex,123456789012345678,January 15
+Sam,234567890123456789,March 22
 ```
 
-Updating a Worker secret creates and deploys a new Worker version. No restart or persistent service is involved.
+Names are labels for your convenience and are not uploaded. Use full month names;
+February 29 is supported. Discord IDs must remain text: spreadsheet applications
+can round these long numbers, so format that column as text before editing.
+Quoted CSV fields (including names containing commas) are supported.
+
+After saving the file:
+
+```bash
+npm run friends:validate
+npm run friends:upload
+```
+
+The upload command validates every record and rejects duplicate IDs before
+passing the converted data directly to Wrangler over stdin. No generated JSON
+file is needed. It replaces the entire `FRIENDS_JSON` secret, preserving the
+separate `DISCORD_WEBHOOK_URL` secret. An empty file with only the header requires
+`npm run friends:upload -- --allow-empty` to intentionally clear the list.
+
+You must be logged in with `npm exec wrangler login`. Uploading a secret creates
+and deploys a Worker version; stop the old Railway bot before the first production
+upload/deployment to avoid duplicate announcements. This command updates birthday
+data, not application code; use `npm run deploy` for code changes. Local edits do
+not affect production until uploaded. The local `.dev.vars` JSON used by Wrangler
+development is not updated by this command.
+
+For initial setup without manually writing JSON, put `DISCORD_WEBHOOK_URL` in
+the Git-ignored `.dev.vars` file, fill in `friends.csv`, then run:
+
+```bash
+npm run deploy:configured
+```
+
+This deploys the code and both secrets together, which is required when the
+Worker does not yet exist. It uses a temporary file readable only by your user,
+then deletes it when Wrangler exits. Later birthday-only changes use
+`npm run friends:upload`.
+
+Keep a private backup of `friends.csv`; Git will not back it up for you.
 
 ## Delivery behavior
 

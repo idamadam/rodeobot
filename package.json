@@ -11,7 +11,10 @@
     "test:watch": "node --test --watch",
     "test:coverage": "node --test --experimental-test-coverage --test-coverage-lines=85 --test-coverage-branches=85 --test-coverage-functions=85",
     "validate:config": "node --env-file-if-exists=.dev.vars scripts/validate-config.js",
+    "friends:validate": "node scripts/friends.js validate",
+    "friends:upload": "node scripts/friends.js upload",
     "deploy": "wrangler deploy",
+    "deploy:configured": "node --env-file=.dev.vars scripts/deploy-configured.js",
     "deploy:dry-run": "wrangler deploy --dry-run"
   },
   "license": "ISC",

@@ -111,5 +111,6 @@ dist
 .tern-port
 
 friends.json
+friends.csv
 friends_flat.json
 db/
