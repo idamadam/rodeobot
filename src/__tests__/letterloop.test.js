@@ -28,6 +28,7 @@ describe("Letterloop issue parsing", () => {
 
   it("reads the masthead, footer, and a member-free issue link", () => {
     assert.equal(issue.title, "The Test Loop");
+    assert.equal(issue.bannerUrl, "https://ik.imagekit.io/letterloop/logo.png");
     assert.equal(issue.issueLine, "Issue No.3 • November 13th, 2026");
     assert.equal(issue.contributors, "Sam, Jo and Ri");
     assert.equal(issue.nextIssueDate, "Friday, December 11th");

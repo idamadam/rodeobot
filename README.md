@@ -163,7 +163,7 @@ When a Letterloop issue such as "👋 The Pig Pen: Issue No.2" arrives, the Work
 - The opening message lists the contributors, a link to the issue, and the next issue date.
 - Each question gets its own message, with every answer and each person's photos as a gallery under their answer.
 - Each photo-wall post gets its own message, so people can reply to a specific set of photos.
-- Music, Check It Out, One Good Thing, and any other sections get one message each. Songs show album art with a Spotify search link.
+- Music, Check It Out, One Good Thing, and any other sections get one message each. Songs show album art with search links for Spotify, Apple Music, and YouTube Music.
 
 Mentions are disabled, so text like `@everyone` never pings anyone. Letterloop's links include your personal member ID, which can act as a login token, so the Worker strips it and posts only the plain issue link.
 

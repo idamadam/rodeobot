@@ -8,6 +8,8 @@ const ISSUE_SUBJECT_PATTERN = /^\W*(.+?):\s*Issue No\.\s*(\d+)\s*$/u;
 const MEMBER_FRAGMENT_PATTERN = /#([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})-([^#]+)$/i;
 const NEXT_ISSUE_LABEL = /next issue will be delivered on/i;
 const PHOTO_WALL_KEY = "photowall";
+// The masthead image links to the Letterloop home page; it is the group's banner.
+const BANNER_HREF_PATTERN = /^https:\/\/app\.letterloop\.co\/?$/i;
 
 const TOKEN_PATTERN = new RegExp(
   [
@@ -109,7 +111,9 @@ export function tokenizeIssueHtml(html) {
       tokens.push(parseMusicCard(groups.cardHref, groups.card));
     } else if (groups.photoHref !== undefined) {
       const member = parseMemberFragment(groups.photoHref);
-      if (member) {
+      if (BANNER_HREF_PATTERN.test(decodeEntities(groups.photoHref))) {
+        tokens.push({ type: "banner", url: decodeEntities(groups.photoSrc) });
+      } else if (member) {
         tokens.push({
           type: "photo",
           memberId: member.memberId,
@@ -222,6 +226,7 @@ export function parseLetterloopIssue(html) {
     title: null,
     issueLine: null,
     issueUrl: null,
+    bannerUrl: null,
     contributors: null,
     nextIssueDate: null,
     sections: [],
@@ -239,6 +244,9 @@ export function parseLetterloopIssue(html) {
     }
 
     switch (token.type) {
+      case "banner":
+        issue.bannerUrl ??= token.url;
+        break;
       case "issueLink":
         issue.issueUrl ??= token.url;
         break;

@@ -17,20 +17,23 @@ function truncate(value, limit) {
   return value.length <= limit ? value : `${value.slice(0, limit - 1)}…`;
 }
 
-function escapeLinkLabel(value) {
-  return value.replace(/[[\]]/g, "\\$&");
+function escapeMarkdown(value) {
+  return value.replace(/[*_~`|[\]\\]/g, "\\$&");
 }
 
-function spotifySearchUrl(track) {
-  return `https://open.spotify.com/search/${encodeURIComponent(
-    [track.title, track.artist].filter(Boolean).join(" "),
-  )}`;
-}
+// Letterloop only provides the title and artist, so each service gets a search.
+const MUSIC_SEARCHES = [
+  ["Spotify", (query) => `https://open.spotify.com/search/${encodeURIComponent(query)}`],
+  ["Apple Music", (query) => `https://music.apple.com/search?term=${encodeURIComponent(query)}`],
+  ["YouTube Music", (query) => `https://music.youtube.com/search?q=${encodeURIComponent(query)}`],
+];
 
 function formatTrack(track) {
   const label = [track.title, track.artist].filter(Boolean).join(" — ");
-  // Angle brackets stop Discord unfurling a preview for every song.
-  return `🎵 [${escapeLinkLabel(label)}](<${spotifySearchUrl(track)}>)`;
+  const query = [track.title, track.artist].filter(Boolean).join(" ");
+  // Angle brackets stop Discord unfurling a preview for every link.
+  const links = MUSIC_SEARCHES.map(([name, url]) => `[${name}](<${url(query)}>)`);
+  return `🎵 **${escapeMarkdown(label)}**\n-# ${links.join(" · ")}`;
 }
 
 // Splits text that cannot fit in one message, preferring line then word breaks.
@@ -189,8 +192,18 @@ export function buildNewsletterMessages(issue, subjectInfo) {
     username: truncate(issue.title, 80),
     allowed_mentions: { parse: [] },
   };
+  // The opening post mirrors the email masthead: the group's banner, then
+  // the issue summary.
   const messages = [
-    { ...base, content: buildIntro(issue), thread_name: buildIssueThreadName(issue, subjectInfo) },
+    {
+      ...base,
+      thread_name: buildIssueThreadName(issue, subjectInfo),
+      flags: COMPONENTS_V2_FLAG,
+      components: [
+        ...(issue.bannerUrl ? galleryAtoms([issue.bannerUrl]).map((atom) => atom.component) : []),
+        { type: TEXT_DISPLAY, content: buildIntro(issue) },
+      ],
+    },
   ];
 
   for (const section of issue.sections) {

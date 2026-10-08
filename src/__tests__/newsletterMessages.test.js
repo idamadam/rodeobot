@@ -55,18 +55,24 @@ describe("newsletter Discord messages", () => {
     issueNumber: 3,
   });
 
-  it("opens a forum post with the issue summary", () => {
+  it("opens a forum post with the banner and issue summary", () => {
     assert.deepEqual(messages[0], {
       username: "The Test Loop",
       allowed_mentions: { parse: [] },
       thread_name: "Issue No.3 · November 13th, 2026",
-      content: [
-        "📬 **The Test Loop** — Issue No.3 • November 13th, 2026",
-        "🖋 Made by Sam, Jo and Ri",
-        "🔗 [Read it on Letterloop](<https://app.letterloop.co/issue/issue123?letterloopId=loop456>)",
-        "🗓️ Next issue: Friday, December 11th",
-        "-# Each section is posted below — reply to whatever catches your eye.",
-      ].join("\n"),
+      flags: COMPONENTS_V2_FLAG,
+      components: [
+        gallery("https://ik.imagekit.io/letterloop/logo.png"),
+        text(
+          [
+            "📬 **The Test Loop** — Issue No.3 • November 13th, 2026",
+            "🖋 Made by Sam, Jo and Ri",
+            "🔗 [Read it on Letterloop](<https://app.letterloop.co/issue/issue123?letterloopId=loop456>)",
+            "🗓️ Next issue: Friday, December 11th",
+            "-# Each section is posted below — reply to whatever catches your eye.",
+          ].join("\n"),
+        ),
+      ],
     });
     assert.ok(messages.slice(1).every((message) => !("thread_name" in message)));
   });
@@ -108,7 +114,15 @@ describe("newsletter Discord messages", () => {
     );
   });
 
-  it("shows tracks with album art and Spotify search links", () => {
+  const musicLinks = (query) =>
+    "-# " +
+    [
+      `[Spotify](<https://open.spotify.com/search/${query}>)`,
+      `[Apple Music](<https://music.apple.com/search?term=${query}>)`,
+      `[YouTube Music](<https://music.youtube.com/search?q=${query}>)`,
+    ].join(" · ");
+
+  it("shows tracks with album art and links to each music service", () => {
     const track = (content, artwork) => ({
       type: 9,
       components: [text(content)],
@@ -117,28 +131,28 @@ describe("newsletter Discord messages", () => {
     assert.deepEqual(messages[6].components, [
       text("## 🎧 Music\n**Sam:**"),
       track(
-        "🎵 [Song & Dance — The Band](<https://open.spotify.com/search/Song%20%26%20Dance%20The%20Band>)",
+        `🎵 **Song & Dance — The Band**\n${musicLinks("Song%20%26%20Dance%20The%20Band")}`,
         "https://i.scdn.co/image/art-Son",
       ),
       text("**Ri:**"),
       track(
-        "🎵 [First — Artist A](<https://open.spotify.com/search/First%20Artist%20A>)",
+        `🎵 **First — Artist A**\n${musicLinks("First%20Artist%20A")}`,
         "https://i.scdn.co/image/art-Fir",
       ),
       track(
-        "🎵 [Second \\[Live\\] — Artist B](<https://open.spotify.com/search/Second%20%5BLive%5D%20Artist%20B>)",
+        `🎵 **Second \\[Live\\] — Artist B**\n${musicLinks("Second%20%5BLive%5D%20Artist%20B")}`,
         "https://i.scdn.co/image/art-Sec",
       ),
     ]);
 
     const plain = buildNewsletterMessages(
       issueWith(
-        [{ prompt: null, entries: [entry("A", "", { tracks: [{ title: "Song", artist: "" }] })] }],
+        [{ prompt: null, entries: [entry("A", "", { tracks: [{ title: "Song_Remix", artist: "" }] })] }],
         "🎧 Music",
       ),
     );
     assert.deepEqual(plain[1].components, [
-      text("## 🎧 Music\n**A:**\n🎵 [Song](<https://open.spotify.com/search/Song>)"),
+      text(`## 🎧 Music\n**A:**\n🎵 **Song\\_Remix**\n${musicLinks("Song_Remix")}`),
     ]);
   });
 
@@ -210,6 +224,7 @@ describe("newsletter Discord messages", () => {
     assert.equal(buildIssueThreadName({ issueLine: "x".repeat(150) }).length, 100);
 
     const minimal = buildNewsletterMessages({ ...issueWith([]), issueLine: null });
-    assert.equal(minimal[0].content.split("\n")[0], "📬 **Loop** — New issue");
+    assert.deepEqual(minimal[0].components.map((component) => component.type), [10]);
+    assert.equal(minimal[0].components[0].content.split("\n")[0], "📬 **Loop** — New issue");
   });
 });
