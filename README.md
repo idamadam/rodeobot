@@ -1,6 +1,6 @@
 # RodeoBot
 
-RodeoBot is a scheduled [Cloudflare Worker](https://developers.cloudflare.com/workers/) that posts birthday announcements and 14-day reminders to one Discord channel through an incoming webhook.
+RodeoBot is a scheduled [Cloudflare Worker](https://developers.cloudflare.com/workers/) that posts birthday announcements and 14-day reminders to one Discord channel through an incoming webhook. It also receives forwarded [Letterloop](https://letterloop.co/) newsletter issues by email and posts each one to a Discord forum channel for discussion (see [Letterloop newsletter posts](#letterloop-newsletter-posts)).
 
 It has no persistent process, Discord Gateway connection, bot token, slash commands, database, or runtime dependencies. Cloudflare invokes it twice per UTC day; a Melbourne-time guard ensures exactly one invocation performs the 08:00 check across daylight-saving changes.
 
@@ -156,12 +156,68 @@ Keep a private backup of `friends.csv`; Git will not back it up for you.
 - There is intentionally no KV deduplication. One request minimizes partial delivery, but an accepted request whose response is lost can very rarely be delivered twice.
 - The combined message must remain within Discord's 2,000-character and 100-user mention limits; exceeding either fails visibly instead of silently dropping content.
 
+## Letterloop newsletter posts
+
+When a Letterloop issue such as "👋 The Pig Pen: Issue No.2" arrives, the Worker's `email` handler creates a new post in a Discord forum channel:
+
+- The opening message lists the contributors, a link to the issue, and the next issue date.
+- Each question gets its own message, with every answer and each person's photos as a gallery under their answer.
+- Each photo-wall post gets its own message, so people can reply to a specific set of photos.
+- Music, Check It Out, One Good Thing, and any other sections get one message each. Songs show album art with a Spotify search link.
+
+Mentions are disabled, so text like `@everyone` never pings anyone. Letterloop's links include your personal member ID, which can act as a login token, so the Worker strips it and posts only the plain issue link.
+
+### Setup
+
+1. **Discord forum channel.** Create a forum channel, open **Edit Channel → Integrations → Webhooks**, create a webhook, and copy its URL. Keep it separate from the birthday webhook.
+2. **Secret and deployment.**
+
+   ```bash
+   npm exec wrangler secret put LETTERLOOP_WEBHOOK_URL
+   npm run deploy
+   ```
+
+3. **Email address.** Email Routing runs on `critter.sh`, which has no other mail. Do not enable it on `idamadam.com`: that domain's MX records belong to iCloud, and enabling routing would replace them. Route a hard-to-guess address to the Worker; Letterloop's DMARC policy is `p=none`, so the address is the main guard against spoofed issues.
+
+   ```bash
+   npx wrangler email routing enable critter.sh
+   npx wrangler email routing rules create critter.sh --name "Letterloop to Discord" --match-type literal --match-field to --match-value pigpen-<random>@critter.sh --action-type worker --action-value rodeobot
+   ```
+
+4. **Gmail forwarding.** Start a log stream so you can read Gmail's confirmation code:
+
+   ```bash
+   npm exec wrangler tail
+   ```
+
+   In Gmail, open **Settings → Forwarding and POP/IMAP → Add a forwarding address** and enter the routing address. Gmail's confirmation email reaches the Worker, which ignores it but logs `Gmail forwarding confirmation code: …`. Enter that code in Gmail. You do not need to turn on forwarding for all mail.
+5. **Gmail filter.** Create a filter with `from:hello@letterloop.co subject:"The Pig Pen: Issue"` and choose **Forward it to** the routing address. Only issues should match. Comment notifications, question prompts, and Letterloop's own "In The Loop" newsletter should not.
+
+### Trying it locally
+
+In Gmail, open an issue and use **⋮ → Download message** to save the `.eml` file. Put a disposable test forum webhook in `.dev.vars` as `LETTERLOOP_WEBHOOK_URL`, then run `npm run dev` and post the file to Wrangler's local email endpoint:
+
+```bash
+curl -X POST "http://localhost:8787/cdn-cgi/handler/email?from=you@gmail.com&to=pigpen@critter.sh" --data-binary @issue.eml
+```
+
+### Delivery notes
+
+- Anything that is not from `hello@letterloop.co` with an `Issue No.` subject is logged and dropped.
+- If delivery fails before anything is posted, the handler throws, so the send can be retried. Once the forum post exists, later failures are logged only, because a retry would create a duplicate post.
+- Discord rate limits are handled by waiting the time Discord requests (up to 90 seconds per wait) and retrying.
+- The parser depends on Letterloop's current email layout. If Letterloop changes its template, delivery fails with `Email did not match the expected Letterloop issue layout.` in the Worker logs.
+
 ## Architecture
 
 - [`src/worker.js`](./src/worker.js): scheduled entry point, daylight-saving guard, orchestration, and safe logging
 - [`src/config.js`](./src/config.js): secret, webhook URL, Discord ID, and birthday validation
 - [`src/birthdayService.js`](./src/birthdayService.js): dependency-free Melbourne calendar and reminder logic
-- [`src/webhook.js`](./src/webhook.js): raw Discord payload construction and delivery
+- [`src/webhook.js`](./src/webhook.js): raw Discord payload construction and delivery, thread targeting, and rate-limit retries
+- [`src/mime.js`](./src/mime.js): dependency-free MIME decoding for inbound email
+- [`src/letterloop.js`](./src/letterloop.js): Letterloop issue HTML parsing and photo attribution
+- [`src/newsletterMessages.js`](./src/newsletterMessages.js): Discord forum-post and message construction for an issue
+- [`src/newsletterService.js`](./src/newsletterService.js): email filtering and newsletter delivery orchestration
 
 CI runs the Node test suite with 85% coverage thresholds, audits the dependency tree, and validates the Worker bundle with a Wrangler deployment dry run.
 

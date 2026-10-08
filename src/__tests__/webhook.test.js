@@ -79,15 +79,96 @@ describe("Discord webhook delivery", () => {
       { message: "Discord webhook request could not be completed." },
     );
     await assert.rejects(
-      executeDiscordWebhook(WEBHOOK_URL, {}, async () => ({
-        ok: false,
-        status: 429,
-      })),
+      executeDiscordWebhook(
+        WEBHOOK_URL,
+        {},
+        async () => ({ ok: false, status: 429 }),
+        { sleep: async () => {} },
+      ),
       { message: "Discord webhook request failed with status 429." },
     );
     await assert.rejects(
       executeDiscordWebhook(WEBHOOK_URL, {}, async () => undefined),
       { message: "Discord webhook request failed with status unknown." },
     );
+  });
+  it("posts into a thread and returns Discord's message", async () => {
+    const calls = [];
+    const message = await executeDiscordWebhook(
+      WEBHOOK_URL,
+      { content: "hi" },
+      async (url) => {
+        calls.push(url);
+        return { ok: true, status: 200, json: async () => ({ channel_id: "9" }) };
+      },
+      { threadId: "77" },
+    );
+
+    assert.equal(calls[0], `${WEBHOOK_URL}?wait=true&thread_id=77`);
+
+    await executeDiscordWebhook(
+      WEBHOOK_URL,
+      { components: [] },
+      async (url) => {
+        calls.push(url);
+        return { ok: true, status: 200 };
+      },
+    );
+    assert.equal(calls[1], `${WEBHOOK_URL}?wait=true&with_components=true`);
+    assert.deepEqual(message, { channel_id: "9" });
+  });
+
+  it("waits and retries when Discord rate limits a request", async () => {
+    const waits = [];
+    const responses = [
+      { ok: false, status: 429, json: async () => ({ retry_after: 1.25 }) },
+      {
+        ok: false,
+        status: 429,
+        json: async () => { throw new Error("not JSON"); },
+        headers: new Headers({ "retry-after": "2" }),
+      },
+      { ok: false, status: 429, json: async () => ({ retry_after: "soon" }) },
+      { ok: true, status: 200, json: async () => ({ id: "1" }) },
+    ];
+
+    const message = await executeDiscordWebhook(
+      WEBHOOK_URL,
+      {},
+      async () => responses.shift(),
+      { sleep: async (ms) => waits.push(ms) },
+    );
+
+    assert.deepEqual(message, { id: "1" });
+    assert.deepEqual(waits, [1_250, 2_000, 1_000]);
+  });
+
+  it("gives up on long rate limits and paces exhausted buckets", async () => {
+    await assert.rejects(
+      executeDiscordWebhook(
+        WEBHOOK_URL,
+        {},
+        async () => ({ ok: false, status: 429, json: async () => ({ retry_after: 120 }) }),
+        { sleep: async () => assert.fail("should not wait") },
+      ),
+      { message: "Discord webhook request failed with status 429." },
+    );
+
+    const waits = [];
+    const message = await executeDiscordWebhook(
+      WEBHOOK_URL,
+      {},
+      async () => ({
+        ok: true,
+        status: 200,
+        headers: new Headers({
+          "x-ratelimit-remaining": "0",
+          "x-ratelimit-reset-after": "0.4",
+        }),
+      }),
+      { sleep: async (ms) => waits.push(ms) },
+    );
+    assert.equal(message, null);
+    assert.deepEqual(waits, [400]);
   });
 });

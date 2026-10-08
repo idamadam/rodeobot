@@ -3,3 +3,6 @@ DISCORD_WEBHOOK_URL="https://discord.com/api/webhooks/223456789012345678/replace
 
 # Discord user IDs are numeric snowflakes, not usernames or @handles.
 FRIENDS_JSON='[{"discordUserId":"123456789012345678","birthday":"August 13"}]'
+
+# Webhook for the Discord forum channel that receives Letterloop issues.
+LETTERLOOP_WEBHOOK_URL="https://discord.com/api/webhooks/323456789012345678/replace-with-webhook-token"
