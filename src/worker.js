@@ -4,11 +4,6 @@ import {
   getZonedDateParts,
 } from "./birthdayService.js";
 import { loadWorkerConfig } from "./config.js";
-import {
-  MAX_EMAIL_BYTES,
-  deliverNewsletterEmail,
-  readEmailBytes,
-} from "./newsletterService.js";
 import { buildWebhookPayload, executeDiscordWebhook } from "./webhook.js";
 
 const DELIVERY_HOUR = 8;
@@ -56,22 +51,6 @@ export default {
       return result;
     } catch (error) {
       console.error("Scheduled birthday check failed:", error.message);
-      throw error;
-    }
-  },
-
-  async email(message, env) {
-    if (message.rawSize > MAX_EMAIL_BYTES) {
-      console.error(`Ignored ${message.rawSize}-byte email; the limit is ${MAX_EMAIL_BYTES}.`);
-      return { status: "ignored", messageCount: 0 };
-    }
-
-    try {
-      return await deliverNewsletterEmail({ raw: await readEmailBytes(message), env });
-    } catch (error) {
-      console.error("Newsletter delivery failed:", error.message);
-      // Once a forum post exists, a redelivery would create a duplicate post.
-      if (error.sentCount) return { status: "partial", messageCount: error.sentCount };
       throw error;
     }
   },

@@ -1,6 +1,6 @@
 # Repository guidance
 
-RodeoBot is an ECMAScript-module Cloudflare Worker with two entry points. Two UTC Cron Triggers post birthday announcements and 14-day reminders through a Discord incoming webhook. An Email Routing `email` handler turns forwarded Letterloop newsletter issues into a Discord forum post through a second webhook. There is no HTTP route, persistent process, Discord.js client, slash-command workflow, database, or runtime dependency.
+RodeoBot is an ECMAScript-module Cloudflare Worker running on two UTC Cron Triggers. It posts birthday announcements and 14-day reminders through a Discord incoming webhook. There is no HTTP route, persistent process, Discord.js client, slash-command workflow, database, or runtime dependency.
 
 ## Runtime flow
 
@@ -11,16 +11,9 @@ RodeoBot is an ECMAScript-module Cloudflare Worker with two entry points. Two UT
 5. `src/webhook.js` combines all blocks into one raw Discord webhook request with restricted mentions.
 6. Successful and no-op events call `controller.noRetry()`. Failures are logged without secret values and rethrown.
 
-## Newsletter flow
+## Archived features
 
-1. Gmail forwards Letterloop issue emails to a hard-to-guess Email Routing address on `critter.sh`. Never enable Email Routing on `idamadam.com`: its MX records belong to iCloud.
-2. `src/worker.js` `email()` reads the raw message; `src/mime.js` decodes it without dependencies.
-3. `src/newsletterService.js` ignores anything not from `hello@letterloop.co` with an `Issue No.` subject, logging the sender and subject, plus the code from Gmail forwarding confirmations.
-4. `src/letterloop.js` parses the issue HTML. Photo attribution relies on `#<memberId>-<sectionKey>` link fragments; the photo wall renders photos before captions, every other section renders the author first.
-5. `src/newsletterMessages.js` builds one forum post (`thread_name`), then Components V2 messages per question/section, and one per photo-wall post (text, media galleries under each answer, track sections), within Discord's 40-component and 4,000-character limits. `src/webhook.js` adds `with_components=true` for these.
-6. Failures before the first post are rethrown; after a post exists they are logged only, to avoid duplicate forum posts on redelivery.
-
-Letterloop links carry the recipient's `member` ID, which acts as a personal access token. Never post it; `sanitizeIssueUrl` strips it. Test fixtures are synthetic; never commit real issue content.
+The Letterloop newsletter email handler lives only at the `archive/letterloop` tag. If it is restored, never enable Email Routing on `idamadam.com`: its MX records belong to iCloud.
 
 ## Commands
 
@@ -42,10 +35,10 @@ Tests use `node:test` and `node:assert/strict`. Keep date calculation and payloa
 
 ## Configuration invariants
 
-- Required secrets: `DISCORD_WEBHOOK_URL`, `FRIENDS_JSON`, and `LETTERLOOP_WEBHOOK_URL` (a forum channel webhook; the email handler loads only this one).
+- Required secrets: `DISCORD_WEBHOOK_URL` and `FRIENDS_JSON`.
 - `FRIENDS_JSON` is an array of canonical `{ "discordUserId", "birthday" }` records.
 - Discord user IDs are numeric 17–20 digit snowflakes.
 - Birthdays use full `Month Day` strings.
 - Delivery is fixed at 08:00 in `Australia/Melbourne`, with a 14-day reminder.
-- The webhook payload allows only the explicitly configured user mentions; newsletter payloads allow none.
+- The webhook payload allows only the explicitly configured user mentions.
 - Secrets must never appear in tracked configuration, logs, or error messages.

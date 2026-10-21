@@ -2,7 +2,6 @@ import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 
 import {
-  loadNewsletterConfig,
   loadWorkerConfig,
   parseFriends,
   validateWebhookUrl,
@@ -117,15 +116,6 @@ describe("Worker configuration", () => {
     assert.throws(
       () => loadWorkerConfig({ DISCORD_WEBHOOK_URL: WEBHOOK_URL }),
       /FRIENDS_JSON secret/,
-    );
-  });
-  it("loads the separate newsletter webhook", () => {
-    assert.deepEqual(loadNewsletterConfig({ LETTERLOOP_WEBHOOK_URL: ` ${WEBHOOK_URL} ` }), {
-      webhookUrl: WEBHOOK_URL,
-    });
-    assert.throws(
-      () => loadNewsletterConfig({ LETTERLOOP_WEBHOOK_URL: "nope" }),
-      /LETTERLOOP_WEBHOOK_URL must be a valid URL/,
     );
   });
 });

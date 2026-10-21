@@ -59,13 +59,13 @@ export function parseFriends(value) {
   });
 }
 
-export function validateWebhookUrl(value, name = "DISCORD_WEBHOOK_URL") {
+export function validateWebhookUrl(value) {
   let url;
 
   try {
     url = new URL(value);
   } catch {
-    throw new Error(`${name} must be a valid URL.`);
+    throw new Error("DISCORD_WEBHOOK_URL must be a valid URL.");
   }
 
   const segments = url.pathname.split("/").filter(Boolean);
@@ -84,7 +84,7 @@ export function validateWebhookUrl(value, name = "DISCORD_WEBHOOK_URL") {
     !DISCORD_WEBHOOK_HOST_PATTERN.test(url.hostname) ||
     !hasValidPath
   ) {
-    throw new Error(`${name} must be a Discord incoming webhook URL.`);
+    throw new Error("DISCORD_WEBHOOK_URL must be a Discord incoming webhook URL.");
   }
 
   url.hash = "";
@@ -95,14 +95,5 @@ export function loadWorkerConfig(env) {
   return {
     webhookUrl: validateWebhookUrl(requiredSecret("DISCORD_WEBHOOK_URL", env)),
     friends: parseFriends(requiredSecret("FRIENDS_JSON", env)),
-  };
-}
-
-export function loadNewsletterConfig(env) {
-  return {
-    webhookUrl: validateWebhookUrl(
-      requiredSecret("LETTERLOOP_WEBHOOK_URL", env),
-      "LETTERLOOP_WEBHOOK_URL",
-    ),
   };
 }
